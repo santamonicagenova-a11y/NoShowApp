@@ -398,7 +398,7 @@ function loadCFG(){
     priceAmt:'19',
     admin:''
   };
-  document.getElementById('planPrice').innerHTML=`€${CFG.priceAmt} <span>/ mese</span>`;
+  const pp=document.getElementById('planPrice'); if(pp) pp.innerHTML=`€${CFG.priceAmt} <span>/ mese</span>`;
 }
 
 function salvaConfig(){
@@ -408,7 +408,15 @@ function salvaConfig(){
 
 async function initApp(){
   loadCFG();
-  SB=supabase.createClient(CFG.url,CFG.key);
+  if(typeof supabase === 'undefined'){
+    setTimeout(initApp, 200); return;
+  }
+  try {
+    SB=supabase.createClient(CFG.url,CFG.key);
+  } catch(e) {
+    console.error('Supabase init error:', e);
+    setTimeout(initApp, 500); return;
+  }
   if(CFG.priceAmt) document.getElementById('planPrice').innerHTML=`€${CFG.priceAmt} <span>/ mese</span>`;
   const{data:{session}}=await SB.auth.getSession();
   if(session){currentUser=session.user;await loadProfile()}
@@ -739,7 +747,11 @@ async function eliminaUtente(uid, ristorante){
 
 
 
-initApp();
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
 </script>
 </body>
 </html>

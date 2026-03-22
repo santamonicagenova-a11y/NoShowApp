@@ -109,6 +109,20 @@ main{max-width:480px;margin:0 auto;padding:20px 16px 100px}
 .loading{text-align:center;padding:40px 0;color:var(--muted);font-size:14px}
 .empty-state{text-align:center;padding:48px 0;color:var(--muted)}
 .empty-state .ei{font-size:40px;margin-bottom:10px}
+.cauzione-form{background:var(--card2);border:1px solid rgba(230,57,70,0.3);border-radius:var(--radius);padding:18px;margin-top:12px;animation:fadeIn .2s}
+.cauzione-form .form-title{color:#ff6b6b;font-size:14px;margin-bottom:14px}
+.cauzione-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.cauzione-total{background:rgba(230,57,70,0.1);border-radius:var(--radius-sm);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.cauzione-total-label{font-size:12px;color:var(--muted)}
+.cauzione-total-amt{font-size:20px;font-weight:700;color:#ff6b6b;font-family:'DM Mono',monospace}
+.btn-whatsapp{width:100%;padding:13px;background:#25D366;color:white;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px}
+.btn-copy-link{width:100%;padding:11px;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text)}
+.cauzioni-item{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;animation:fadeIn .2s}
+.cauzioni-status{font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px}
+.s-attesa{background:rgba(243,156,18,0.15);color:#f39c12}
+.s-pagata{background:rgba(46,204,113,0.15);color:#2ecc71}
+.s-usata{background:rgba(74,158,255,0.15);color:#4a9eff}
+.s-trattenuta{background:rgba(230,57,70,0.15);color:#ff6b6b}
 .admin-section{margin-bottom:24px}
 .admin-section h2{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
 .invite-row{display:flex;gap:8px}
@@ -138,7 +152,7 @@ details{margin-bottom:14px}
 <body>
 
 <!-- SETUP MODAL -->
-<div class="modal-bg show" id="setupModal">
+<div class="modal-bg" id="setupModal">
   <div class="modal">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><svg width="36" height="36" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><rect width="120" height="120" rx="20" fill="#E63946"/><path d="M60 8 L104 26 L104 62 Q104 88 60 112 Q16 88 16 62 L16 26 Z" fill="white" opacity="0.15"/><path d="M60 8 L104 26 L104 62 Q104 88 60 112 Q16 88 16 62 L16 26 Z" fill="none" stroke="white" stroke-width="3"/><g fill="white"><rect x="48" y="28" width="3.5" height="20" rx="1.5"/><rect x="53.5" y="28" width="3.5" height="20" rx="1.5"/><rect x="59" y="28" width="3.5" height="20" rx="1.5"/><path d="M48 44 Q48 52 51.75 54 Q55.5 52 55.5 44 Z"/><rect x="50" y="54" width="3.5" height="24" rx="1.75"/></g><g fill="white"><path d="M69 28 Q78 28 79 40 L69 44 Z"/><rect x="68" y="44" width="3.5" height="34" rx="1.75"/></g></svg><span style="font-size:18px;font-weight:600;letter-spacing:-0.3px;">SafeTable</span></div>
     <h2 style="font-size:15px;color:var(--muted);font-weight:500;margin-bottom:6px">Configurazione iniziale</h2>
@@ -225,8 +239,8 @@ CREATE POLICY "active_insert" ON noshow FOR INSERT WITH CHECK (
       <div class="auth-title">Accedi</div>
       <div class="auth-sub">Piattaforma riservata ai ristoratori iscritti.</div>
       <div class="msg msg-err" id="loginErr"></div>
-      <div class="field"><label>Email</label><input id="loginEmail" type="email" placeholder="tu@email.com"/></div>
-      <div class="field"><label>Password</label><input id="loginPwd" type="password" placeholder="••••••••"/></div>
+      <div class="field"><label>Email</label><input id="loginEmail" type="email" placeholder="tu@email.com" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <div class="field"><label>Password</label><input id="loginPwd" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/></div>
       <button class="btn-primary" id="btnLogin" onclick="doLogin()">Accedi</button>
       <div class="auth-switch">Non hai un account? <button class="btn-ghost" onclick="showScreen('screenRegister')">Registrati con codice invito</button></div>
     </div>
@@ -243,11 +257,17 @@ CREATE POLICY "active_insert" ON noshow FOR INSERT WITH CHECK (
       <div class="auth-sub">Inserisci il codice invito ricevuto per registrarti.</div>
       <div class="msg msg-err" id="regErr"></div>
       <div class="msg msg-ok" id="regOk"></div>
-      <div class="field"><label>Codice invito</label><input id="regCode" type="text" placeholder="NS-XXXX-XXXX" class="mono" style="text-transform:uppercase"/></div>
-      <div class="field"><label>Nome ristorante *</label><input id="regRist" type="text" placeholder="Es: Trattoria da Mario"/></div>
-      <div class="field"><label>Email</label><input id="regEmail" type="email" placeholder="tu@email.com"/></div>
-      <div class="field"><label>Password</label><input id="regPwd" type="password" placeholder="Min. 8 caratteri"/></div>
-      <button class="btn-primary" id="btnReg" onclick="doRegister()">Crea account</button>
+      <div class="field"><label>Codice invito</label><input id="regCode" type="text" placeholder="NS-XXXX-XXXX" class="mono" style="text-transform:uppercase" onkeydown="if(event.key==='Enter')doRegister()"/></div>
+      <div class="field"><label>Nome ristorante *</label><input id="regRist" type="text" placeholder="Es: Trattoria da Mario" onkeydown="if(event.key==='Enter')doRegister()"/></div>
+      <div class="field"><label>Email</label><input id="regEmail" type="email" placeholder="tu@email.com" onkeydown="if(event.key==='Enter')doRegister()"/></div>
+      <div class="field"><label>Password</label><input id="regPwd" type="password" placeholder="Min. 8 caratteri" onkeydown="if(event.key==='Enter')doRegister()"/></div>
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;padding:12px;background:rgba(255,255,255,0.04);border-radius:8px;border:0.5px solid var(--border)">
+  <input type="checkbox" id="privacyCheck" style="margin-top:3px;flex-shrink:0;accent-color:var(--red);width:16px;height:16px;cursor:pointer"/>
+  <label for="privacyCheck" style="font-size:12px;color:var(--muted);line-height:1.6;cursor:pointer">
+    Ho letto e accetto l'<a href="https://safetableapp.com/privacy" target="_blank" style="color:var(--blue);text-decoration:none">Informativa Privacy</a> e acconsento al trattamento dei miei dati personali ai sensi del GDPR per l'utilizzo della piattaforma SafeTable.
+  </label>
+</div>
+<button class="btn-primary" id="btnReg" onclick="doRegister()">Crea account</button>
       <div class="auth-switch">Hai già un account? <button class="btn-ghost" onclick="showScreen('screenLogin')">Accedi</button></div>
     </div>
   </div>
@@ -258,22 +278,19 @@ CREATE POLICY "active_insert" ON noshow FOR INSERT WITH CHECK (
       <div class="auth-logo-icon"><svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><path d="M60 8 L104 26 L104 62 Q104 88 60 112 Q16 88 16 62 L16 26 Z" fill="white" opacity="0.15"/><path d="M60 8 L104 26 L104 62 Q104 88 60 112 Q16 88 16 62 L16 26 Z" fill="none" stroke="white" stroke-width="3"/><g fill="white"><rect x="48" y="28" width="3.5" height="20" rx="1.5"/><rect x="53.5" y="28" width="3.5" height="20" rx="1.5"/><rect x="59" y="28" width="3.5" height="20" rx="1.5"/><path d="M48 44 Q48 52 51.75 54 Q55.5 52 55.5 44 Z"/><rect x="50" y="54" width="3.5" height="24" rx="1.75"/></g><g fill="white"><path d="M69 28 Q78 28 79 40 L69 44 Z"/><rect x="68" y="44" width="3.5" height="34" rx="1.75"/></g></svg></div>
       <div class="auth-logo-text">SafeTable</div>
     </div>
-    <div class="auth-card">
-      <div class="auth-title">Abbonati per accedere</div>
-      <div class="auth-sub">Accesso completo al database condiviso di no-show tra ristoratori.</div>
-      <div class="plan-box">
-        <div class="plan-price" id="planPrice">€19 <span>/ mese</span></div>
-        <div class="plan-name">Piano Ristoratore</div>
-        <div class="plan-feats">
-          <div class="plan-feat"><span class="feat-ok">✓</span> Database condiviso tra ristoratori</div>
-          <div class="plan-feat"><span class="feat-ok">✓</span> Ricerca e segnalazione no-show</div>
-          <div class="plan-feat"><span class="feat-ok">✓</span> Storico aggiornato in tempo reale</div>
-          <div class="plan-feat"><span class="feat-ok">✓</span> Disdici quando vuoi</div>
-        </div>
+    <div class="auth-card" style="text-align:center">
+      <div style="font-size:52px;margin-bottom:16px">🎉</div>
+      <div class="auth-title">Benvenuto in SafeTable!</div>
+      <div class="auth-sub">Sei tra i primi ristoratori ad accedere alla piattaforma in versione beta.</div>
+      <div style="background:rgba(46,204,113,0.12);border:1px solid rgba(46,204,113,0.3);border-radius:12px;padding:20px;margin-bottom:20px;text-align:left">
+        <div style="font-size:13px;font-weight:600;color:#2ecc71;margin-bottom:10px">✓ Accesso beta gratuito</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.7">Il tuo account è stato creato con successo.<br>Un amministratore lo attiverà entro <strong style="color:var(--text)">24 ore</strong>.<br>Riceverai conferma via email non appena potrai accedere.</div>
       </div>
-      <button class="btn-primary" onclick="goToStripe()">Abbonati con Stripe</button>
-      <div class="stripe-note">Pagamento sicuro via Stripe · Cancella quando vuoi</div>
-      <button class="btn-outline" onclick="checkSub()" style="margin-top:14px;font-size:13px">Ho già pagato — Verifica</button>
+      <div style="background:var(--card2);border-radius:10px;padding:14px;margin-bottom:20px;text-align:left">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;font-weight:600">Cosa include l'accesso beta</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.9">🔍 Ricerca numeri in tempo reale<br>⚠️ Segnalazione no-show<br>📋 Storico condiviso tra ristoratori<br>🆓 Completamente gratuito durante la beta</div>
+      </div>
+      <button class="btn-outline" onclick="checkSub()" style="font-size:13px;margin-bottom:8px">Sono già stato attivato — Entra</button>
       <button class="btn-outline" onclick="doLogout()" style="font-size:13px;color:var(--muted)">Esci dall'account</button>
     </div>
   </div>
@@ -304,10 +321,11 @@ CREATE POLICY "active_insert" ON noshow FOR INSERT WITH CHECK (
       <button class="btn-logout" onclick="doLogout()">Esci</button>
     </div>
   </header>
-  <nav class="tabs" id="mainTabs">
+  <nav class="tabs" id="mainTabs" style="grid-template-columns:1fr 1fr 1fr 1fr">
     <div class="tab active" onclick="goTab('cerca')"><span class="tab-icon">🔍</span>Cerca</div>
     <div class="tab" onclick="goTab('segnala')"><span class="tab-icon">⚠️</span>Segnala</div>
     <div class="tab" onclick="goTab('feed')"><span class="tab-icon">📋</span>Storico</div>
+    <div class="tab" onclick="goTab('cauzioni')"><span class="tab-icon">💳</span>Cauzioni</div>
   </nav>
   <main>
     <div class="page active" id="page-cerca">
@@ -339,6 +357,14 @@ CREATE POLICY "active_insert" ON noshow FOR INSERT WITH CHECK (
       </div>
       <div id="feedList"><div class="loading">Caricamento…</div></div>
     </div>
+    <div class="page hidden" id="page-cauzioni">
+      <div class="feed-header">
+        <div class="feed-title">Cauzioni attive</div>
+        <div class="count-badge" id="cauzioniCount">—</div>
+      </div>
+      <div id="cauzioniList"><div class="loading">Caricamento…</div></div>
+    </div>
+
     <div class="page hidden" id="page-admin">
       <div class="admin-section">
         <h2>Genera e invia codice invito</h2>
@@ -349,11 +375,9 @@ CREATE POLICY "active_insert" ON noshow FOR INSERT WITH CHECK (
         </div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <input id="inviteEmail" type="email" placeholder="email@ristoratore.it" style="flex:1;padding:10px 13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg);color:var(--text);font-family:inherit;outline:none"/>
-          <button id="btnSendInvite" onclick="sendInvite()" style="padding:10px 16px;background:var(--red);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">✉ Invia</button>
+          <button onclick="inviaMailto()" style="padding:10px 16px;background:var(--red);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">✉ Apri mail</button>
         </div>
-        <div class="toast toast-ok" id="toastInviteOk" style="margin-top:8px">✓ Invito inviato con successo</div>
-        <div class="toast toast-err" id="toastInviteErr" style="margin-top:8px">✗ Errore nell'invio. Riprova.</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:8px">Genera un codice, inserisci l'email del ristoratore e clicca Invia.</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px">Genera un codice, inserisci l'email e clicca <b>Apri mail</b> — si apre il tuo client di posta con il messaggio già compilato.</div>
       </div>
       <div class="admin-section">
         <h2>Utenti registrati</h2>
@@ -384,7 +408,6 @@ function salvaConfig(){
 
 async function initApp(){
   loadCFG();
-  document.getElementById('setupModal').classList.remove('show');
   SB=supabase.createClient(CFG.url,CFG.key);
   if(CFG.priceAmt) document.getElementById('planPrice').innerHTML=`€${CFG.priceAmt} <span>/ mese</span>`;
   const{data:{session}}=await SB.auth.getSession();
@@ -454,6 +477,7 @@ async function doRegister(){
   const ok=document.getElementById('regOk');
   const btn=document.getElementById('btnReg');
   err.classList.remove('show');ok.classList.remove('show');
+  if(!document.getElementById('privacyCheck').checked){err.textContent='Accetta la privacy policy per continuare.';err.classList.add('show');return}
   if(!code||!rist||!email||!pwd){err.textContent='Compila tutti i campi.';err.classList.add('show');return}
   if(pwd.length<8){err.textContent='Password di almeno 8 caratteri.';err.classList.add('show');return}
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Verifica codice…';
@@ -538,12 +562,15 @@ async function cerca(raw){
       <span style="font-size:11px;color:var(--muted);white-space:nowrap;margin-left:8px">${d}</span>
     </div>`;
   }).join('');
+  const cauzioneBtn = rows.length>=2 ? `<button onclick="mostraCauzioneForm('${raw}')" style="width:100%;padding:12px;background:var(--red);color:white;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:8px">💳 Richiedi cauzione</button>` : '';
   res.innerHTML=`<div class="result-box result-danger" style="text-align:center;padding:28px 20px;background:${riskBg};margin-bottom:12px">
     <div style="font-size:48px;margin-bottom:12px">🛡</div>
     <div style="font-size:22px;font-weight:700;letter-spacing:2px;color:${riskColor};margin-bottom:6px">RISCHIO ${risk}</div>
     <div style="font-size:14px;color:var(--muted)">${rows.length} segnalazion${rows.length>1?'i':'e'} da ${ristN} ristorante${ristN!==1?'i':''}</div>
     ${rows[0].name?`<div style="font-size:13px;color:var(--text);margin-top:8px">👤 ${rows[0].name}</div>`:''}
+    ${cauzioneBtn}
   </div>
+  <div id="cauzioneFormContainer"></div>
   <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:8px">Storico segnalazioni</div>
   <div class="seg-list">${items}</div>`;
 }
@@ -613,37 +640,25 @@ function copyInvite(){
   });
 }
 
-async function sendInvite(){
+function inviaMailto(){
   const code=document.getElementById('inviteCode').value;
   const email=document.getElementById('inviteEmail').value.trim();
-  const btn=document.getElementById('btnSendInvite');
-  const toastOk=document.getElementById('toastInviteOk');
-  const toastErr=document.getElementById('toastInviteErr');
-  toastOk.classList.remove('show');toastErr.classList.remove('show');
   if(!code){alert('Prima genera un codice invito.');return;}
   if(!email){alert('Inserisci l\'email del ristoratore.');return;}
-  btn.disabled=true;btn.textContent='Invio…';
-  try{
-    const{data:{session}}=await SB.auth.getSession();
-    const res=await fetch(`https://ltgvyanqzkpulocypsve.supabase.co/functions/v1/send-invite`,{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization':`Bearer ${session.access_token}`
-      },
-      body:JSON.stringify({email,code})
-    });
-    const data=await res.json();
-    if(res.ok&&data.success){
-      toastOk.classList.add('show');setTimeout(()=>toastOk.classList.remove('show'),3000);
-      document.getElementById('inviteEmail').value='';
-    } else {
-      toastErr.classList.add('show');setTimeout(()=>toastErr.classList.remove('show'),3000);
-    }
-  }catch(e){
-    toastErr.classList.add('show');setTimeout(()=>toastErr.classList.remove('show'),3000);
-  }
-  btn.disabled=false;btn.textContent='✉ Invia';
+  const rist=currentProfile&&currentProfile.ristorante?currentProfile.ristorante:'SafeTable';
+  const oggetto=encodeURIComponent('Il tuo codice invito per SafeTable');
+  const corpo=encodeURIComponent(
+    'Ciao,\n\n' +
+    'ti invito a provare SafeTable, il database condiviso tra ristoratori per segnalare i clienti no-show.\n\n' +
+    'Il tuo codice invito personale è:\n\n' +
+    '    ' + code + '\n\n' +
+    'Per registrarti vai su: https://safetableapp.com\n' +
+    'Clicca su "Registrati con codice invito" e inserisci il codice qui sopra.\n\n' +
+    'L\'accesso è gratuito durante la fase beta.\n\n' +
+    'A presto,\n' + rist
+  );
+  window.location.href=`mailto:${email}?subject=${oggetto}&body=${corpo}`;
+  document.getElementById('inviteEmail').value='';
 }
 
 async function eliminaSegnalazione(id){
@@ -721,14 +736,7 @@ async function eliminaUtente(uid, ristorante){
 }
 
 
-document.addEventListener('keydown', e => {
-  if (e.key !== 'Enter') return;
-  const active = document.activeElement;
-  if (!active) return;
-  const id = active.id;
-  if (['loginEmail','loginPwd'].includes(id)) doLogin();
-  else if (['regCode','regRist','regEmail','regPwd'].includes(id)) doRegister();
-});
+
 initApp();
 </script>
 </body>

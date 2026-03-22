@@ -457,6 +457,7 @@ function showApp(){
 }
 
 async function doLogin(){
+  if(!SB){setTimeout(doLogin,300);return;}
   const email=document.getElementById('loginEmail').value.trim();
   const pwd=document.getElementById('loginPwd').value;
   const err=document.getElementById('loginErr');
@@ -469,6 +470,7 @@ async function doLogin(){
 }
 
 async function doRegister(){
+  if(!SB){setTimeout(doRegister,300);return;}
   const code=document.getElementById('regCode').value.trim().toUpperCase();
   const rist=document.getElementById('regRist').value.trim();
   const email=document.getElementById('regEmail').value.trim();

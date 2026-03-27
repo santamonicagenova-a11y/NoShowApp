@@ -377,6 +377,12 @@ CREATE POLICY "active_insert" ON noshow FOR INSERT WITH CHECK (
             style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px;font-size:16px;width:100%;outline:none;font-family:inherit"/>
           <div style="font-size:12px;color:var(--muted);margin-top:6px">Il cliente può cancellare gratuitamente fino a questo numero di ore prima della prenotazione.</div>
         </div>
+        <div class="field">
+          <label>Alert se il cliente non inserisce la carta entro (minuti)</label>
+          <input type="number" id="setupMinutiAttesa" min="1" max="1440" value="30"
+            style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px;font-size:16px;width:100%;outline:none;font-family:inherit"/>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px">Ricevi un alert nell'app se il cliente non inserisce la carta entro questo tempo dal momento in cui hai inviato il link.</div>
+        </div>
         <button class="btn-submit" onclick="salvaSetup()">Salva impostazioni</button>
         <div class="toast toast-ok" id="toastSetupOk" style="margin-top:8px;text-align:center">✓ Impostazioni salvate</div>
       </div>
@@ -503,7 +509,7 @@ function showApp(){
     document.getElementById('mainTabs').appendChild(te);
   }
   loadFeed();
-  loadSetup();;
+  loadSetup();
 }
 
 async function doLogin(){
@@ -668,7 +674,7 @@ async function segnala(){
 
 
 
-let setupConfig = { penale: 30, ore: 12 };
+let setupConfig = { penale: 30, ore: 12, minutiAttesa: 30 };
 
 function loadSetup() {
   const saved = localStorage.getItem('noshowapp_setup');
@@ -678,19 +684,24 @@ function loadSetup() {
   cauzioneDefaultAmt = setupConfig.penale;
   const penaleEl = document.getElementById('setupPenale');
   const oreEl = document.getElementById('setupOre');
+  const minutiEl = document.getElementById('setupMinutiAttesa');
   if (penaleEl) penaleEl.value = setupConfig.penale;
   if (oreEl) oreEl.value = setupConfig.ore;
+  if (minutiEl) minutiEl.value = setupConfig.minutiAttesa || 30;
   aggiornaPreview();
+  avviaControlloScadenze();
 }
 
 
 function salvaSetup() {
   const penale = parseInt(document.getElementById('setupPenale').value) || 30;
   const ore = parseInt(document.getElementById('setupOre').value) || 12;
-  setupConfig = { penale, ore };
+  const minutiAttesa = parseInt(document.getElementById('setupMinutiAttesa').value) || 30;
+  setupConfig = { penale, ore, minutiAttesa };
   cauzioneDefaultAmt = penale;
   localStorage.setItem('noshowapp_setup', JSON.stringify(setupConfig));
   aggiornaPreview();
+  avviaControlloScadenze();
   const t = document.getElementById('toastSetupOk');
   if(t){t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500);}
 }
@@ -703,7 +714,54 @@ function aggiornaPreview() {
   el.innerHTML = `Il Suo tavolo è riservato. Per completare la prenotazione Le chiediamo una carta a garanzia — <b>nessun addebito, nessun blocco fondi</b>. Potrà cancellare gratuitamente fino a <b>${ore} ore prima</b>. Solo in caso di mancata presentazione senza avviso si applica una penale di <b>€${penale} a persona</b>.`;
 }
 
-let cauzioneDefaultAmt = 30;
+let _scadenzeTimer = null;
+const _alertatiIds = new Set(); // evita di ripetere lo stesso alert
+
+function avviaControlloScadenze() {
+  if (_scadenzeTimer) clearInterval(_scadenzeTimer);
+  // Controlla subito e poi ogni minuto
+  controllaScadenze();
+  _scadenzeTimer = setInterval(controllaScadenze, 60000);
+}
+
+async function controllaScadenze() {
+  if (!SB || !currentUser) return;
+  const minuti = setupConfig.minutiAttesa || 30;
+  const soglia = new Date(Date.now() - minuti * 60000).toISOString();
+  const { data: scadute } = await SB.from('cauzioni')
+    .select('id, phone, note, totale')
+    .eq('ristorante_id', currentUser.id)
+    .eq('status', 'in_attesa')
+    .lt('created_at', soglia);
+  if (!scadute || scadute.length === 0) return;
+  scadute.forEach(r => {
+    if (_alertatiIds.has(r.id)) return;
+    _alertatiIds.add(r.id);
+    mostraAlertScadenza(r, minuti);
+  });
+}
+
+function mostraAlertScadenza(r, minuti) {
+  const banner = document.createElement('div');
+  banner.style.cssText = `
+    position:fixed;top:70px;left:50%;transform:translateX(-50%);
+    background:#1c1c1c;border:2px solid #f39c12;color:var(--text);
+    padding:16px 20px;border-radius:14px;font-size:14px;font-weight:500;
+    z-index:1000;box-shadow:0 4px 24px rgba(0,0,0,0.5);
+    animation:fadeIn .3s ease;max-width:340px;width:90%;
+  `;
+  banner.innerHTML = `
+    <div style="font-size:13px;color:#f39c12;font-weight:700;margin-bottom:6px">⏰ Carta non inserita</div>
+    <div style="font-size:13px;margin-bottom:4px">${r.phone}</div>
+    ${r.note ? `<div style="font-size:12px;color:#888;margin-bottom:4px">${r.note}</div>` : ''}
+    <div style="font-size:12px;color:#888;margin-bottom:12px">Nessuna carta dopo ${minuti} minuti — €${r.totale}</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="goTab('cauzioni');this.closest('div[style]').remove()" style="flex:1;padding:8px;background:#f39c12;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Vai alle cauzioni</button>
+      <button onclick="this.closest('div[style]').remove()" style="padding:8px 14px;background:none;border:1px solid #444;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;color:#888">✕</button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+}
 
 function mostraCauzioneForm(phone) {
   const container = document.getElementById('cauzioneFormContainer');
@@ -726,8 +784,16 @@ function mostraCauzioneForm(phone) {
       </div>
     </div>
     <div class="field">
+      <label>Nome cliente</label>
+      <input type="text" id="cNome" placeholder="Es: Mario Rossi" style="background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:14px;width:100%;outline:none;font-family:inherit"/>
+    </div>
+    <div class="field">
+      <label>Data prenotazione</label>
+      <input type="date" id="cDataPrenotazione" style="background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:14px;width:100%;outline:none;font-family:inherit"/>
+    </div>
+    <div class="field">
       <label>Note (opzionale)</label>
-      <input type="text" id="cNote" placeholder="Es: Cena del 25 marzo, tavolo da 2" style="background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:14px;width:100%;outline:none;font-family:inherit"/>
+      <input type="text" id="cNote" placeholder="Es: Tavolo da 2, cena" style="background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:14px;width:100%;outline:none;font-family:inherit"/>
     </div>
     <div class="cauzione-total">
       <span class="cauzione-total-label">Penale totale</span>
@@ -737,6 +803,9 @@ function mostraCauzioneForm(phone) {
     <div class="toast toast-err" id="toastCauzioneErr" style="margin-top:8px">✗ Errore. Riprova.</div>
   </div>`;
   aggiornaTotale();
+  // Data default = oggi
+  const dp = document.getElementById('cDataPrenotazione');
+  if (dp) dp.value = new Date().toISOString().slice(0,10);
   container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
@@ -750,6 +819,8 @@ function aggiornaTotale() {
 async function generaLinkCauzione(phone) {
   const persone = parseInt(document.getElementById('cPersone').value);
   const importo = parseFloat(document.getElementById('cImporto').value);
+  const nome = document.getElementById('cNome').value.trim();
+  const dataPrenotazione = document.getElementById('cDataPrenotazione').value;
   const note = document.getElementById('cNote').value.trim();
   const btn = document.getElementById('btnGeneraLink');
   const toastErr = document.getElementById('toastCauzioneErr');
@@ -766,7 +837,7 @@ async function generaLinkCauzione(phone) {
         headers: { 'Content-Type': 'application/json', 'apikey': CFG.key },
         body: JSON.stringify({
           phone,
-          name: note || 'Cliente',
+          name: nome || 'Cliente',
           persone,
           importo_persona: importo,
           ristorante: currentProfile.ristorante,
@@ -776,7 +847,30 @@ async function generaLinkCauzione(phone) {
     );
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    mostraLinkCauzione(phone, data.url, persone, importo);
+
+    // Salva subito la cauzione su Supabase con status in_attesa
+    const { data: cauzioneRow, error: dbErr } = await SB.from('cauzioni').insert([{
+      ristorante_id: currentUser.id,
+      ristorante: currentProfile.ristorante,
+      phone,
+      persone,
+      importo_persona: importo,
+      totale: persone * importo,
+      nome: nome || null,
+      data_prenotazione: dataPrenotazione || null,
+      note: note || null,
+      stripe_payment_link: data.url,
+      stripe_payment_link_id: data.session_id,
+      status: 'in_attesa',
+    }]).select().single();
+
+    mostraLinkCauzione(phone, data.url, persone, importo, nome);
+
+    // Avvia polling se salvataggio ok
+    if (!dbErr && cauzioneRow) {
+      avviaPollingCauzione(cauzioneRow.id);
+    }
+
   } catch(err) {
     toastErr.textContent = '✗ ' + (err.message || 'Errore. Riprova.');
     toastErr.classList.add('show');
@@ -787,13 +881,53 @@ async function generaLinkCauzione(phone) {
   }
 }
 
-function mostraLinkCauzione(phone, link, persone, importo) {
+let _pollingTimer = null;
+
+function avviaPollingCauzione(cauzioneId) {
+  if (_pollingTimer) clearInterval(_pollingTimer);
+  let tentativi = 0;
+  const maxTentativi = 60; // 10 minuti max (60 × 10s)
+
+  _pollingTimer = setInterval(async () => {
+    tentativi++;
+    if (tentativi > maxTentativi) {
+      clearInterval(_pollingTimer);
+      _pollingTimer = null;
+      return;
+    }
+    const { data } = await SB.from('cauzioni').select('status').eq('id', cauzioneId).single();
+    if (data && data.status === 'pagata') {
+      clearInterval(_pollingTimer);
+      _pollingTimer = null;
+      // Mostra notifica
+      mostraNotificaCarta();
+      loadCauzioni();
+    }
+  }, 10000);
+}
+
+function mostraNotificaCarta() {
+  // Crea toast di notifica temporaneo
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position:fixed;top:80px;left:50%;transform:translateX(-50%);
+    background:#2ecc71;color:white;padding:14px 24px;border-radius:12px;
+    font-size:15px;font-weight:600;z-index:999;
+    box-shadow:0 4px 20px rgba(46,204,113,0.4);
+    animation:fadeIn .3s ease;white-space:nowrap;
+  `;
+  toast.textContent = '✓ Carta inserita dal cliente!';
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 5000);
+}
+
+function mostraLinkCauzione(phone, link, persone, importo, nome) {
   const container = document.getElementById('cauzioneFormContainer');
   const totale = persone * importo;
   const disclaimer = encodeURIComponent(
-    `Gentile cliente, per confermare la Sua prenotazione presso ${currentProfile.ristorante} Le chiediamo di registrare una carta a garanzia.\n\n` +
+    `Gentile ${nome||'cliente'}, per confermare la Sua prenotazione presso ${currentProfile.ristorante} Le chiediamo di registrare una carta a garanzia.\n\n` +
     `🔒 Nessun addebito ora, nessun blocco fondi.\n` +
-    `✓ Cancellazione gratuita fino a 12 ore prima.\n` +
+    `✓ Cancellazione gratuita fino a ${setupConfig.ore} ore prima.\n` +
     `⚠ Penale di €${importo} a persona (totale €${totale}) solo in caso di no-show.\n\n` +
     `🛡 I dati della carta sono gestiti da Stripe e non vengono mai condivisi con il ristorante — esattamente come avviene negli hotel.\n\n` +
     `Inserisca i dati della carta tramite questo link sicuro:\n${link}`
@@ -816,6 +950,26 @@ async function aggiornaCauzione(id, status) {
   loadCauzioni();
 }
 
+async function annullaCauzione(cauzioneId, phone) {
+  const segnala = confirm('Vuoi segnalare questo cliente come "no-carta" nel database?\n\nOK = Sì, segnala\nAnnulla = No, chiudi solo la cauzione');
+  await SB.from('cauzioni').update({ status: 'rifiuto' }).eq('id', cauzioneId);
+  if (segnala) {
+    await SB.from('noshow').insert([{
+      phone,
+      date: new Date().toISOString().slice(0, 10),
+      note: 'No-carta: ha rifiutato di inserire la carta di garanzia',
+      ristorante: currentProfile.ristorante,
+      user_id: currentUser.id,
+    }]);
+    const toast = document.createElement('div');
+    toast.style.cssText = `position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#f39c12;color:white;padding:14px 24px;border-radius:12px;font-size:15px;font-weight:600;z-index:999;box-shadow:0 4px 20px rgba(243,156,18,0.4);animation:fadeIn .3s ease;white-space:nowrap;`;
+    toast.textContent = '⚠️ Cliente segnalato come no-carta';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+  }
+  loadCauzioni();
+}
+
 async function loadCauzioni(){
   const list=document.getElementById('cauzioniList');
   if(!list) return;
@@ -828,22 +982,34 @@ async function loadCauzioni(){
   if(!rows||rows.length===0){list.innerHTML='<div class="empty-state"><div class="ei">💳</div>Nessuna cauzione ancora</div>';return}
   list.innerHTML=rows.map(r=>{
     const d=r.created_at?new Date(r.created_at).toLocaleDateString('it-IT'):'—';
-    const sc={in_attesa:'s-attesa',pagata:'s-pagata',usata:'s-usata',trattenuta:'s-trattenuta'}[r.status]||'s-attesa';
-    const sl={in_attesa:'In attesa',pagata:'Pagata',usata:'Scalata dal conto',trattenuta:'Trattenuta'}[r.status]||r.status;
-    const actions=r.status==='pagata'?`
-      <div style="display:flex;gap:6px;margin-top:10px">
-        <button onclick="addebitaCauzione('${r.id}')" style="flex:1;padding:8px;border:1px solid #ff6b6b;border-radius:6px;background:none;color:#ff6b6b;font-size:12px;cursor:pointer;font-family:inherit">💳 Addebita no-show</button>
-      </div>`:'';
-    return`<div class="cauzioni-item" id="cauzione-${r.id}">
+    const sc={in_attesa:'s-attesa',pagata:'s-pagata',usata:'s-usata',trattenuta:'s-trattenuta',rifiuto:'s-trattenuta'}[r.status]||'s-attesa';
+    const sl={in_attesa:'⏳ In attesa carta',pagata:'✓ Carta inserita',usata:'Chiusa',trattenuta:'Addebitata',rifiuto:'No-carta'}[r.status]||r.status;
+
+    const isAttesa = r.status === 'in_attesa';
+    const cardStyle = isAttesa
+      ? 'border:2px solid rgba(243,156,18,0.7);background:rgba(243,156,18,0.06);'
+      : '';
+
+    const annullaBtn = (isAttesa || r.status === 'pagata') ? `
+      <button onclick="annullaCauzione('${r.id}','${r.phone}')" style="width:100%;padding:8px;border:1px solid var(--muted);border-radius:6px;background:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;margin-top:8px">✕ Annulla cauzione</button>` : '';
+
+    const addebitaBtn = r.status === 'pagata' ? `
+      <div style="margin-top:8px">
+        <button onclick="addebitaCauzione('${r.id}')" style="width:100%;padding:8px;border:1px solid #ff6b6b;border-radius:6px;background:none;color:#ff6b6b;font-size:12px;cursor:pointer;font-family:inherit">💳 Addebita no-show</button>
+      </div>` : '';
+
+    return`<div class="cauzioni-item" id="cauzione-${r.id}" style="${cardStyle}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
         <div style="font-family:'DM Mono',monospace;font-size:14px;font-weight:500">${r.phone}</div>
         <span class="cauzioni-status ${sc}">${sl}</span>
       </div>
       <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px">€${r.totale} <span style="font-size:12px;color:var(--muted);font-weight:400">(${r.persone} pers. × €${r.importo_persona})</span></div>
+      ${r.nome?`<div style="font-size:13px;color:var(--text);margin-bottom:2px">👤 ${r.nome}</div>`:''}
+      ${r.data_prenotazione?`<div style="font-size:12px;color:var(--muted);margin-bottom:2px">📅 ${new Date(r.data_prenotazione+'T00:00:00').toLocaleDateString('it-IT')}</div>`:''}
       ${r.note?`<div style="font-size:12px;color:var(--muted);margin-bottom:4px">${r.note}</div>`:''}
       <div style="font-size:11px;color:var(--muted)">${d} · ${r.ristorante}</div>
-      ${r.status==='in_attesa'?`<a href="${r.stripe_payment_link}" target="_blank" style="display:block;font-size:11px;color:#4a9eff;margin-top:6px;text-decoration:none">🔗 Link pagamento</a>`:''}
-      ${actions}
+      ${addebitaBtn}
+      ${annullaBtn}
     </div>`;
   }).join('');
 }

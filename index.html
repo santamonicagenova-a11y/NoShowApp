@@ -343,8 +343,7 @@ CREATE POLICY "active_insert" ON noshow FOR INSERT WITH CHECK (
         <div class="field"><label>Data dell'episodio</label><input id="rDate" type="date"/></div>
         <div class="field"><label>Note</label><textarea id="rNote" style="height:80px;line-height:1.5" placeholder="Es: tavolo da 4, cena, nessun avviso…"></textarea></div>
         <button class="btn-submit" id="btnSubmit" onclick="segnala()">Invia segnalazione</button>
-        <div class="toast toast-ok" id="toastSegnalaOk" style="margin-top:8px">✓ Segnalazione inviata con successo</div>
-        <div class="toast toast-ok" id="toastOk">✓ Segnalazione inviata</div>
+        <div class="toast toast-ok" id="toastSegnalaOk" style="margin-top:8px;text-align:center">✓ Segnalazione inviata con successo</div>
         <div class="toast toast-err" id="toastErr">✗ Errore. Riprova.</div>
       </div>
     </div>
@@ -668,7 +667,6 @@ async function segnala(){
     document.getElementById('rNote').value='';
     const ts = document.getElementById('toastSegnalaOk');
     if(ts){ts.classList.add('show');setTimeout(()=>ts.classList.remove('show'),3000);}
-    const t=document.getElementById('toastOk');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);
   } else {
     const t=document.getElementById('toastErr');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);
   }

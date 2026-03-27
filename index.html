@@ -381,14 +381,6 @@ CREATE POLICY "active_insert" ON noshow FOR INSERT WITH CHECK (
         <div class="toast toast-ok" id="toastSetupOk" style="margin-top:8px;text-align:center">✓ Impostazioni salvate</div>
       </div>
       <div class="admin-section">
-        <h2>Link Stripe per numero di persone</h2>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Crea i Payment Link su stripe.com per ogni importo (penale × persone) e incollali qui. L'app userà il link giusto in base al numero di persone selezionato.</div>
-        <div id="stripeLinksForm"></div>
-        <button class="btn-submit" onclick="salvaSetup()" style="margin-top:8px">Salva impostazioni</button>
-        <div class="toast toast-ok" id="toastSetupOk2" style="margin-top:8px;text-align:center">✓ Link salvati</div>
-      </div>
-
-      <div class="admin-section">
         <h2>Anteprima disclaimer</h2>
         <div id="setupPreview" style="background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.25);border-radius:10px;padding:14px;font-size:12px;line-height:1.7;color:var(--text)">
           <div style="font-weight:600;font-size:13px;margin-bottom:6px">🔒 Garanzia della prenotazione</div>
@@ -674,9 +666,7 @@ async function segnala(){
 
 
 
-let setupConfig = { penale: 30, ore: 12, stripeLinks: {
-  1: '', 2: '', 3: '', 4: '', 5: '', 6: '', 7: '', 8: ''
-}};
+let setupConfig = { penale: 30, ore: 12 };
 
 function loadSetup() {
   const saved = localStorage.getItem('noshowapp_setup');
@@ -688,44 +678,19 @@ function loadSetup() {
   const oreEl = document.getElementById('setupOre');
   if (penaleEl) penaleEl.value = setupConfig.penale;
   if (oreEl) oreEl.value = setupConfig.ore;
-  renderStripeLinks();
   aggiornaPreview();
 }
 
-function renderStripeLinks() {
-  const container = document.getElementById('stripeLinksForm');
-  if (!container) return;
-  const penale = setupConfig.penale || 30;
-  let html = '';
-  for (let i = 1; i <= 8; i++) {
-    const totale = penale * i;
-    const val = (setupConfig.stripeLinks && setupConfig.stripeLinks[i]) || '';
-    html += `<div class="field" style="margin-bottom:10px">
-      <label>${i} person${i>1?'e':'a'} — penale €${totale}</label>
-      <input type="url" id="stripeLink_${i}" value="${val}" placeholder="https://buy.stripe.com/..."
-        style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;font-size:12px;width:100%;outline:none;font-family:'DM Mono',monospace"/>
-    </div>`;
-  }
-  container.innerHTML = html;
-}
 
 function salvaSetup() {
   const penale = parseInt(document.getElementById('setupPenale').value) || 30;
   const ore = parseInt(document.getElementById('setupOre').value) || 12;
-  const stripeLinks = {};
-  for (let i = 1; i <= 8; i++) {
-    const el = document.getElementById('stripeLink_'+i);
-    if (el) stripeLinks[i] = el.value.trim();
-  }
-  setupConfig = { penale, ore, stripeLinks };
+  setupConfig = { penale, ore };
   cauzioneDefaultAmt = penale;
   localStorage.setItem('noshowapp_setup', JSON.stringify(setupConfig));
-  renderStripeLinks();
   aggiornaPreview();
-  ['toastSetupOk','toastSetupOk2'].forEach(id => {
-    const t = document.getElementById(id);
-    if(t){t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500);}
-  });
+  const t = document.getElementById('toastSetupOk');
+  if(t){t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500);}
 }
 
 function aggiornaPreview() {
@@ -828,7 +793,8 @@ function mostraLinkCauzione(phone, link, persone, importo) {
     `🔒 Nessun addebito ora, nessun blocco fondi.\n` +
     `✓ Cancellazione gratuita fino a 12 ore prima.\n` +
     `⚠ Penale di €${importo} a persona (totale €${totale}) solo in caso di no-show.\n\n` +
-    `Pagamento sicuro tramite Stripe:\n${link}`
+    `🛡 I dati della carta sono gestiti da Stripe e non vengono mai condivisi con il ristorante — esattamente come avviene negli hotel.\n\n` +
+    `Inserisca i dati della carta tramite questo link sicuro:\n${link}`
   );
   const waLink = `https://wa.me/${phone.replace(/[^0-9]/g,'')}?text=${disclaimer}`;
   container.innerHTML = `<div class="cauzione-form" style="border-color:rgba(46,204,113,0.3)">

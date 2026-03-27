@@ -922,7 +922,9 @@ async function loadFeed(){
   if(!rows||rows.length===0){list.innerHTML='<div class="empty-state"><div class="ei">📭</div>Nessuna segnalazione ancora</div>';return}
   list.innerHTML=rows.map(r=>{
     const d=r.date?new Date(r.date+'T00:00:00').toLocaleDateString('it-IT'):'—';
-    const canDelete=currentProfile&&(currentProfile.role==='admin'||(r.user_id&&r.user_id===currentUser.id));
+    const isAdmin = currentProfile && currentProfile.role === 'admin';
+    const isOwner = currentUser && r.user_id && r.user_id === currentUser.id;
+    const canDelete = isAdmin || isOwner;
     return`<div class="feed-item" id="feed-${r.id}">
       <div class="feed-dot">📵</div>
       <div class="feed-body">

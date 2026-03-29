@@ -1016,6 +1016,7 @@ async function salvaPassword() {
     err.classList.add('show'); setTimeout(() => err.classList.remove('show'), 3000);
   }
 }
+async function aggiornaCauzione(id, status) {
   await SB.from('cauzioni').update({ status }).eq('id', id);
   loadCauzioni();
 }

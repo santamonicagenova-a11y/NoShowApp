@@ -394,6 +394,34 @@ CREATE POLICY "active_insert" ON noshow FOR INSERT WITH CHECK (
           <div style="margin-top:8px;font-size:11px;color:var(--muted)">🔒 Pagamento sicuro tramite Stripe — i dati della carta non raggiungono mai il ristorante.</div>
         </div>
       </div>
+
+      <div class="admin-section">
+        <h2>Il tuo account</h2>
+        <div class="field">
+          <label>Nome ristorante</label>
+          <input type="text" id="accountRistorante" placeholder="Es: Trattoria da Mario"
+            style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px;font-size:15px;width:100%;outline:none;font-family:inherit"/>
+        </div>
+        <button class="btn-submit" onclick="salvaNomeRistorante()" style="margin-bottom:8px">Aggiorna nome</button>
+        <div class="toast toast-ok" id="toastNomeOk" style="margin-top:8px;text-align:center;justify-content:center">✓ Nome aggiornato</div>
+        <div class="toast toast-err" id="toastNomeErr" style="margin-top:8px">✗ Errore. Riprova.</div>
+
+        <div style="border-top:1px solid var(--border);margin:20px 0"></div>
+
+        <div class="field">
+          <label>Nuova password</label>
+          <input type="password" id="accountPwd1" placeholder="Minimo 8 caratteri"
+            style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px;font-size:15px;width:100%;outline:none;font-family:inherit"/>
+        </div>
+        <div class="field">
+          <label>Conferma nuova password</label>
+          <input type="password" id="accountPwd2" placeholder="Ripeti la password"
+            style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px;font-size:15px;width:100%;outline:none;font-family:inherit"/>
+        </div>
+        <button class="btn-submit" onclick="salvaPassword()">Cambia password</button>
+        <div class="toast toast-ok" id="toastPwdOk" style="margin-top:8px;text-align:center;justify-content:center">✓ Password aggiornata</div>
+        <div class="toast toast-err" id="toastPwdErr" style="margin-top:8px">✗ Errore. Riprova.</div>
+      </div>
     </div>
 
     <div class="page hidden" id="page-admin">
@@ -690,6 +718,9 @@ function loadSetup() {
   if (minutiEl) minutiEl.value = setupConfig.minutiAttesa || 30;
   aggiornaPreview();
   avviaControlloScadenze();
+  // Precarica nome ristorante nel campo account
+  const accountRist = document.getElementById('accountRistorante');
+  if (accountRist && currentProfile) accountRist.value = currentProfile.ristorante || '';
 }
 
 
@@ -945,7 +976,46 @@ function mostraLinkCauzione(phone, link, persone, importo, nome) {
   </div>`;
 }
 
-async function aggiornaCauzione(id, status) {
+async function salvaNomeRistorante() {
+  const val = document.getElementById('accountRistorante').value.trim();
+  const ok = document.getElementById('toastNomeOk');
+  const err = document.getElementById('toastNomeErr');
+  if (!val) return;
+  const { error } = await SB.from('profiles').update({ ristorante: val }).eq('id', currentUser.id);
+  if (!error) {
+    currentProfile.ristorante = val;
+    document.getElementById('headerRist').textContent = val;
+    ok.classList.add('show'); setTimeout(() => ok.classList.remove('show'), 2500);
+  } else {
+    err.textContent = '✗ ' + (error.message || 'Errore. Riprova.');
+    err.classList.add('show'); setTimeout(() => err.classList.remove('show'), 3000);
+  }
+}
+
+async function salvaPassword() {
+  const pwd1 = document.getElementById('accountPwd1').value;
+  const pwd2 = document.getElementById('accountPwd2').value;
+  const ok = document.getElementById('toastPwdOk');
+  const err = document.getElementById('toastPwdErr');
+  err.classList.remove('show');
+  if (pwd1.length < 8) {
+    err.textContent = '✗ La password deve essere di almeno 8 caratteri.';
+    err.classList.add('show'); setTimeout(() => err.classList.remove('show'), 3000); return;
+  }
+  if (pwd1 !== pwd2) {
+    err.textContent = '✗ Le due password non coincidono.';
+    err.classList.add('show'); setTimeout(() => err.classList.remove('show'), 3000); return;
+  }
+  const { error } = await SB.auth.updateUser({ password: pwd1 });
+  if (!error) {
+    document.getElementById('accountPwd1').value = '';
+    document.getElementById('accountPwd2').value = '';
+    ok.classList.add('show'); setTimeout(() => ok.classList.remove('show'), 2500);
+  } else {
+    err.textContent = '✗ ' + (error.message || 'Errore. Riprova.');
+    err.classList.add('show'); setTimeout(() => err.classList.remove('show'), 3000);
+  }
+}
   await SB.from('cauzioni').update({ status }).eq('id', id);
   loadCauzioni();
 }

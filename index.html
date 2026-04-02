@@ -587,12 +587,12 @@ function aggiornaRiepilogo() {
   if (rm) rm.textContent = _wMinuti + ' minuti';
 }
 
-function completaWizard() {
+async function completaWizard() {
   setupConfig = { penale: _wPenale, ore: _wOre, minutiAttesa: _wMinuti };
   cauzioneDefaultAmt = _wPenale;
   localStorage.setItem('noshowapp_setup', JSON.stringify(setupConfig));
+  await SB.from('profiles').update({ setup: setupConfig }).eq('id', currentUser.id);
   document.getElementById('wizardModal').classList.remove('show');
-  // Aggiorna i campi del tab Setup
   const penaleEl = document.getElementById('setupPenale');
   const oreEl = document.getElementById('setupOre');
   const minutiEl = document.getElementById('setupMinutiAttesa');
@@ -603,9 +603,9 @@ function completaWizard() {
   avviaControlloScadenze();
 }
 
-function checkWizard() {
-  const saved = localStorage.getItem('noshowapp_setup');
-  if (!saved) mostraWizard();
+async function checkWizard() {
+  const { data } = await SB.from('profiles').select('setup').eq('id', currentUser.id).single();
+  if (!data || !data.setup) mostraWizard();
 }
 
 // ── FINE WIZARD ──────────────────────────────────────────────────────────────
@@ -868,10 +868,19 @@ async function segnala(){
 
 let setupConfig = { penale: 30, ore: 12, minutiAttesa: 30 };
 
-function loadSetup() {
-  const saved = localStorage.getItem('noshowapp_setup');
-  if (saved) {
-    try { setupConfig = JSON.parse(saved); } catch(e) {}
+async function loadSetup() {
+  // Prima leggi da Supabase (fonte di verità)
+  const { data } = await SB.from('profiles').select('setup').eq('id', currentUser.id).single();
+  if (data && data.setup) {
+    setupConfig = { ...setupConfig, ...data.setup };
+    // Sincronizza anche localStorage
+    localStorage.setItem('noshowapp_setup', JSON.stringify(setupConfig));
+  } else {
+    // Fallback localStorage per retrocompatibilità
+    const saved = localStorage.getItem('noshowapp_setup');
+    if (saved) {
+      try { setupConfig = JSON.parse(saved); } catch(e) {}
+    }
   }
   cauzioneDefaultAmt = setupConfig.penale;
   const penaleEl = document.getElementById('setupPenale');
@@ -888,13 +897,14 @@ function loadSetup() {
 }
 
 
-function salvaSetup() {
+async function salvaSetup() {
   const penale = parseInt(document.getElementById('setupPenale').value) || 30;
   const ore = parseInt(document.getElementById('setupOre').value) || 12;
   const minutiAttesa = parseInt(document.getElementById('setupMinutiAttesa').value) || 30;
   setupConfig = { penale, ore, minutiAttesa };
   cauzioneDefaultAmt = penale;
   localStorage.setItem('noshowapp_setup', JSON.stringify(setupConfig));
+  await SB.from('profiles').update({ setup: setupConfig }).eq('id', currentUser.id);
   aggiornaPreview();
   avviaControlloScadenze();
   const t = document.getElementById('toastSetupOk');

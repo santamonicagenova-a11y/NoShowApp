@@ -148,6 +148,9 @@ main{max-width:480px;margin:0 auto;padding:20px 16px 100px;min-height:100vh}
 pre{background:#1a1a1a;color:#e0e0e0;border-radius:8px;padding:12px;font-size:11px;overflow-x:auto;margin-top:8px;line-height:1.6;white-space:pre-wrap;word-break:break-all}
 details summary{font-size:13px;font-weight:500;cursor:pointer;color:var(--muted)}
 details{margin-bottom:14px}
+.wChip{padding:12px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--card2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center;transition:all .15s}
+.wChip:hover{border-color:var(--red);color:var(--red)}
+.wChipSel{border-color:var(--red)!important;background:var(--red-light)!important;color:var(--red)!important}
 </style>
 </head>
 <body>
@@ -225,6 +228,82 @@ CREATE POLICY "active_insert" ON noshow FOR INSERT WITH CHECK (
     <div class="field"><label>Prezzo mensile (solo numero, es: 19)</label><input id="cfgPriceAmt" type="number" placeholder="19"/></div>
     <div class="field"><label>Tua email (diventerai admin)</label><input id="cfgAdmin" type="email" placeholder="tu@email.com"/></div>
     <button class="btn-save" onclick="salvaConfig()">Salva e avvia</button>
+  </div>
+</div>
+
+<!-- WIZARD PRIMO ACCESSO -->
+<div class="modal-bg" id="wizardModal">
+  <div class="modal" style="max-width:420px">
+    <!-- Step indicator -->
+    <div style="display:flex;gap:6px;justify-content:center;margin-bottom:20px">
+      <div id="wDot1" style="width:8px;height:8px;border-radius:50%;background:var(--red)"></div>
+      <div id="wDot2" style="width:8px;height:8px;border-radius:50%;background:var(--border)"></div>
+      <div id="wDot3" style="width:8px;height:8px;border-radius:50%;background:var(--border)"></div>
+    </div>
+
+    <!-- Step 1 -->
+    <div id="wStep1">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:40px;margin-bottom:10px">💳</div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:6px">Penale per no-show</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6">Quanto vuoi addebitare al cliente che non si presenta senza avvisare?</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+        <button onclick="selezionaPenale(20)" id="wPenale20" class="wChip">€20<span style="display:block;font-size:10px;font-weight:400;margin-top:2px">a persona</span></button>
+        <button onclick="selezionaPenale(30)" id="wPenale30" class="wChip wChipSel">€30<span style="display:block;font-size:10px;font-weight:400;margin-top:2px">consigliato</span></button>
+        <button onclick="selezionaPenale(50)" id="wPenale50" class="wChip">€50<span style="display:block;font-size:10px;font-weight:400;margin-top:2px">a persona</span></button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">
+        <div style="font-size:12px;color:var(--muted);white-space:nowrap">Importo personalizzato:</div>
+        <input type="number" id="wPenaleCustom" min="5" max="500" placeholder="Es: 40"
+          style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:15px;background:var(--card2);color:var(--text);outline:none;font-family:inherit"
+          oninput="selezionaPenaleCustom(this.value)"/>
+        <div style="font-size:13px;color:var(--muted)">€</div>
+      </div>
+      <button class="btn-primary" onclick="wizardStep(2)">Avanti →</button>
+    </div>
+
+    <!-- Step 2 -->
+    <div id="wStep2" class="hidden">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:40px;margin-bottom:10px">⏰</div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:6px">Cancellazione gratuita</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6">Fino a quante ore prima della prenotazione il cliente può cancellare senza penale?</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px">
+        <button onclick="selezionaOre(6)" id="wOre6" class="wChip">6 ore<span style="display:block;font-size:10px;font-weight:400;margin-top:2px">stesso giorno</span></button>
+        <button onclick="selezionaOre(12)" id="wOre12" class="wChip wChipSel">12 ore<span style="display:block;font-size:10px;font-weight:400;margin-top:2px">consigliato</span></button>
+        <button onclick="selezionaOre(24)" id="wOre24" class="wChip">24 ore<span style="display:block;font-size:10px;font-weight:400;margin-top:2px">giorno prima</span></button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-outline" onclick="wizardStep(1)" style="flex:1">← Indietro</button>
+        <button class="btn-primary" onclick="wizardStep(3)" style="flex:2">Avanti →</button>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div id="wStep3" class="hidden">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:40px;margin-bottom:10px">🔔</div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:6px">Alert carta non inserita</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6">Dopo quanto tempo vuoi essere avvisato se il cliente non ha ancora inserito la carta di garanzia?</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px">
+        <button onclick="selezionaMinuti(15)" id="wMin15" class="wChip">15 min<span style="display:block;font-size:10px;font-weight:400;margin-top:2px">urgente</span></button>
+        <button onclick="selezionaMinuti(30)" id="wMin30" class="wChip wChipSel">30 min<span style="display:block;font-size:10px;font-weight:400;margin-top:2px">consigliato</span></button>
+        <button onclick="selezionaMinuti(60)" id="wMin60" class="wChip">60 min<span style="display:block;font-size:10px;font-weight:400;margin-top:2px">rilassato</span></button>
+      </div>
+      <div style="background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.25);border-radius:10px;padding:14px;margin-bottom:16px;font-size:12px;line-height:1.7;color:var(--muted)">
+        <div style="font-weight:600;font-size:13px;color:var(--text);margin-bottom:4px">📋 Riepilogo configurazione</div>
+        <div>Penale: <strong style="color:var(--text)" id="wRiepPenale">€30</strong> a persona</div>
+        <div>Cancellazione gratuita fino a <strong style="color:var(--text)" id="wRiepOre">12 ore</strong> prima</div>
+        <div>Alert carta dopo <strong style="color:var(--text)" id="wRiepMin">30 minuti</strong></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-outline" onclick="wizardStep(2)" style="flex:1">← Indietro</button>
+        <button class="btn-primary" onclick="completaWizard()" style="flex:2">✓ Salva e inizia</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -447,6 +526,90 @@ CREATE POLICY "active_insert" ON noshow FOR INSERT WITH CHECK (
 </div>
 
 <script>
+// ── WIZARD ──────────────────────────────────────────────────────────────────
+let _wPenale = 30, _wOre = 12, _wMinuti = 30;
+
+function mostraWizard() {
+  document.getElementById('wizardModal').classList.add('show');
+  wizardStep(1);
+}
+
+function wizardStep(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById('wStep'+i).classList.add('hidden');
+    document.getElementById('wDot'+i).style.background = 'var(--border)';
+  });
+  document.getElementById('wStep'+n).classList.remove('hidden');
+  document.getElementById('wDot'+n).style.background = 'var(--red)';
+  if (n === 3) aggiornaRiepilogo();
+}
+
+function selezionaPenale(val) {
+  _wPenale = val;
+  document.getElementById('wPenaleCustom').value = '';
+  ['20','30','50'].forEach(v => {
+    const el = document.getElementById('wPenale'+v);
+    if (el) el.className = 'wChip' + (String(val)===v?' wChipSel':'');
+  });
+}
+
+function selezionaPenaleCustom(val) {
+  if (!val) return;
+  _wPenale = parseInt(val);
+  ['wPenale20','wPenale30','wPenale50'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.className = 'wChip';
+  });
+}
+
+function selezionaOre(val) {
+  _wOre = val;
+  ['6','12','24'].forEach(v => {
+    const el = document.getElementById('wOre'+v);
+    if (el) el.className = 'wChip' + (String(val)===v?' wChipSel':'');
+  });
+}
+
+function selezionaMinuti(val) {
+  _wMinuti = val;
+  ['15','30','60'].forEach(v => {
+    const el = document.getElementById('wMin'+v);
+    if (el) el.className = 'wChip' + (String(val)===v?' wChipSel':'');
+  });
+}
+
+function aggiornaRiepilogo() {
+  const rp = document.getElementById('wRiepPenale');
+  const ro = document.getElementById('wRiepOre');
+  const rm = document.getElementById('wRiepMin');
+  if (rp) rp.textContent = '€' + _wPenale;
+  if (ro) ro.textContent = _wOre + ' ore';
+  if (rm) rm.textContent = _wMinuti + ' minuti';
+}
+
+function completaWizard() {
+  setupConfig = { penale: _wPenale, ore: _wOre, minutiAttesa: _wMinuti };
+  cauzioneDefaultAmt = _wPenale;
+  localStorage.setItem('noshowapp_setup', JSON.stringify(setupConfig));
+  document.getElementById('wizardModal').classList.remove('show');
+  // Aggiorna i campi del tab Setup
+  const penaleEl = document.getElementById('setupPenale');
+  const oreEl = document.getElementById('setupOre');
+  const minutiEl = document.getElementById('setupMinutiAttesa');
+  if (penaleEl) penaleEl.value = _wPenale;
+  if (oreEl) oreEl.value = _wOre;
+  if (minutiEl) minutiEl.value = _wMinuti;
+  aggiornaPreview();
+  avviaControlloScadenze();
+}
+
+function checkWizard() {
+  const saved = localStorage.getItem('noshowapp_setup');
+  if (!saved) mostraWizard();
+}
+
+// ── FINE WIZARD ──────────────────────────────────────────────────────────────
+
 let CFG={},SB=null,currentUser=null,currentProfile=null;
 
 function loadCFG(){
@@ -538,6 +701,7 @@ function showApp(){
   }
   loadFeed();
   loadSetup();
+  checkWizard();
 }
 
 async function doLogin(){
@@ -742,7 +906,9 @@ function aggiornaPreview() {
   if (!el) return;
   const penale = document.getElementById('setupPenale')?.value || setupConfig.penale;
   const ore = document.getElementById('setupOre')?.value || setupConfig.ore;
-  el.innerHTML = `Il Suo tavolo è riservato. Per completare la prenotazione Le chiediamo una carta a garanzia — <b>nessun addebito, nessun blocco fondi</b>. Potrà cancellare gratuitamente fino a <b>${ore} ore prima</b>. Solo in caso di mancata presentazione senza avviso si applica una penale di <b>€${penale} a persona</b>.`;
+  el.innerHTML = `Il Suo tavolo è riservato. Per completare la prenotazione Le chiediamo una carta a garanzia — <b>nessun addebito, nessun blocco fondi</b>.<br><br>
+    Entro <b>${ore} ore prima</b> può cancellare o modificare il numero di persone gratuitamente.<br><br>
+    Dopo tale termine, in caso di cancellazione o riduzione dei coperti, si applica una penale di <b>€${penale} a persona</b> sul numero originale di prenotati.`;
 }
 
 let _scadenzeTimer = null;
@@ -801,7 +967,9 @@ function mostraCauzioneForm(phone) {
     <div class="form-title">💳 Richiedi garanzia carta per ${phone}</div>
     <div style="background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.25);border-radius:10px;padding:14px;margin-bottom:14px;font-size:12px;line-height:1.7;color:var(--text)">
       <div style="font-weight:600;font-size:13px;margin-bottom:6px">🔒 Garanzia della prenotazione</div>
-      Il Suo tavolo è riservato. Per completare la prenotazione Le chiediamo una carta a garanzia — <b>nessun addebito, nessun blocco fondi</b>. Potrà cancellare gratuitamente fino a <b>${setupConfig.ore} ore prima</b>. Solo in caso di mancata presentazione senza avviso si applica una penale di <b>€${setupConfig.penale} a persona</b>.
+      Il Suo tavolo è riservato. Per completare la prenotazione Le chiediamo una carta a garanzia — <b>nessun addebito, nessun blocco fondi</b>.<br>
+      Entro <b>${setupConfig.ore} ore prima</b> può cancellare o modificare il numero di persone gratuitamente.<br>
+      Dopo tale termine, in caso di cancellazione o riduzione dei coperti, si applica una penale di <b>€${setupConfig.penale} a persona</b> sul numero originale.
       <div style="margin-top:8px;font-size:11px;color:var(--muted)">🔒 Pagamento sicuro tramite Stripe — i dati della carta non raggiungono mai il ristorante. <a href="https://noshowapp.it/privacy.html" target="_blank" style="color:#4a9eff;text-decoration:none">Leggi i termini completi →</a></div>
     </div>
     <div class="cauzione-row">
@@ -957,9 +1125,11 @@ function mostraLinkCauzione(phone, link, persone, importo, nome) {
   const totale = persone * importo;
   const disclaimer = encodeURIComponent(
     `Gentile ${nome||'cliente'}, per confermare la Sua prenotazione presso ${currentProfile.ristorante} Le chiediamo di registrare una carta a garanzia.\n\n` +
-    `🔒 Nessun addebito ora, nessun blocco fondi.\n` +
-    `✓ Cancellazione gratuita fino a ${setupConfig.ore} ore prima.\n` +
-    `⚠ Penale di €${importo} a persona (totale €${totale}) solo in caso di no-show.\n\n` +
+    `🔒 Nessun addebito ora, nessun blocco fondi.\n\n` +
+    `✅ Entro ${setupConfig.ore} ore prima della prenotazione può:\n` +
+    `   • Cancellare gratuitamente\n` +
+    `   • Modificare il numero di persone senza penale\n\n` +
+    `⚠️ Dopo le ${setupConfig.ore} ore, in caso di cancellazione o riduzione dei coperti, verrà applicata una penale di €${importo} a persona sul numero di persone originale (totale massimo €${totale}).\n\n` +
     `🛡 I dati della carta sono gestiti da Stripe e non vengono mai condivisi con il ristorante — esattamente come avviene negli hotel.\n\n` +
     `Inserisca i dati della carta tramite questo link sicuro:\n${link}`
   );

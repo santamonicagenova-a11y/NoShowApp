@@ -634,7 +634,9 @@ async function initApp(){
     setTimeout(initApp, 200); return;
   }
   try {
-    SB=supabase.createClient(CFG.url,CFG.key);
+    SB=supabase.createClient(CFG.url,CFG.key,{
+      auth: { persistSession: false }
+    });
   } catch(e) {
     console.error('Supabase init error:', e);
     setTimeout(initApp, 500); return;

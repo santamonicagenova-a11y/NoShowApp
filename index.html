@@ -523,6 +523,9 @@ CREATE POLICY "active_insert" ON noshow FOR INSERT WITH CHECK (
       </div>
     </div>
   </main>
+  <div style="text-align:center;padding:16px 0 32px;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">
+    v 2026.04.10.1
+  </div>
 </div>
 
 <script>
@@ -676,7 +679,6 @@ function showApp(){
   document.getElementById('appWrap').classList.remove('hidden');
   document.getElementById('headerRist').textContent=currentProfile.ristorante||'';
   document.getElementById('rDate').value=new Date().toISOString().slice(0,10);
-    const ts=document.getElementById('toastSegnalaOk');if(ts){ts.classList.add('show');setTimeout(()=>ts.classList.remove('show'),3000);}
   if(currentProfile.role==='admin'&&!document.getElementById('tabAdmin')){
     const tabs=document.getElementById('mainTabs');
     

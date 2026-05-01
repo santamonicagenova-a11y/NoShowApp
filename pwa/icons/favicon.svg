@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"><metadata><RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/"><Description><creator>RealFaviconGenerator</creator><source>https://realfavicongenerator.net</source></Description></RDF></metadata><defs>
+    <radialGradient id="hl" cx="30%" cy="20%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.14"></stop>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"></stop>
+    </radialGradient>
+  </defs><rect width="1024" height="1024" rx="230" fill="oklch(0.62 0.19 25)"></rect><rect width="1024" height="1024" rx="230" fill="url(#hl)"></rect><path d="M512 210 L810 340 L810 566 Q810 726 512 880 Q214 726 214 566 L214 340 Z" fill="none" stroke="#ffffff" stroke-width="32" stroke-linejoin="round"></path><path d="M405 385 L405 705 M619 385 L619 705 M405 385 L619 705" stroke="#ffffff" stroke-width="54" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg>

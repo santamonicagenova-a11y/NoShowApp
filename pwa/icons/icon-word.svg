@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect width="1024" height="1024" rx="230" fill="oklch(0.14 0.008 40)"></rect>
+  <text x="512" y="660" text-anchor="middle" font-family="Syne, sans-serif" font-size="720" font-weight="800" fill="oklch(0.62 0.19 25)" letter-spacing="-40">N</text>
+  <g transform="translate(700, 220)">
+    <circle cx="0" cy="0" r="52" fill="oklch(0.62 0.19 25)"></circle>
+    <path d="M0 -28 L22 -18 L22 -2 Q22 14 0 26 Q-22 14 -22 -2 L-22 -18 Z" fill="none" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"></path>
+  </g>
+</svg>

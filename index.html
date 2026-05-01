@@ -1,6 +1,40 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
+<!--
+  Meta tags da incollare nel <head> del tuo index.html per attivare la PWA
+  su iOS Safari. Dopo averli aggiunti, l'utente fa "Condividi → Aggiungi a
+  Home" e l'app si installa come nativa.
+-->
+
+<!-- Standard PWA -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a0a0a">
+
+<!-- iOS specific -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NoShow">
+
+<!-- iOS icons -->
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png">
+<link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167.png">
+
+<!-- Splash screens iOS (opzionali ma professionali) -->
+<link rel="apple-touch-startup-image" href="/icons/splash-1170x2532.png"
+      media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)">
+
+<!-- Registra il service worker -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(() => console.log('[NoShow] SW attivo'))
+        .catch((e) => console.warn('[NoShow] SW errore', e));
+    });
+  }
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>NoShowApp</title>

@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<!--
-  Tag PWA da incollare nel <head> di index.html, subito dopo i font.
-  Path allineati ai PNG generati con realfavicongenerator + il manifest corretto.
--->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>NoShowApp</title>
+<!-- vecchia favicon SVG inline rimossa: ora usiamo le icone PWA dichiarate sotto -->
 
-<!-- Manifest -->
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- PWA Manifest -->
 <link rel="manifest" href="/pwa/icons/site.webmanifest">
 <meta name="theme-color" content="#0a0a0a">
 
-<!-- Favicon (browser desktop) -->
+<!-- Favicon -->
 <link rel="icon" type="image/x-icon" href="/pwa/icons/favicon.ico">
 <link rel="icon" type="image/svg+xml" href="/pwa/icons/favicon.svg">
 <link rel="icon" type="image/png" sizes="96x96" href="/pwa/icons/favicon-96x96.png">
@@ -21,7 +24,7 @@
 <meta name="apple-mobile-web-app-title" content="NoShow">
 <link rel="apple-touch-icon" sizes="180x180" href="/pwa/icons/apple-touch-icon.png">
 
-<!-- Service worker -->
+<!-- Service Worker -->
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -31,13 +34,7 @@
     });
   }
 </script>
-</script>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>NoShowApp</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%20120%22%3E%3Crect%20width%3D%22120%22%20height%3D%22120%22%20rx%3D%2224%22%20fill%3D%22%23E63946%22/%3E%3Cpath%20d%3D%22M60%2010%20L102%2027%20L102%2063%20Q102%2088%2060%20110%20Q18%2088%2018%2063%20L18%2027%20Z%22%20fill%3D%22white%22%20opacity%3D%220.15%22/%3E%3Cpath%20d%3D%22M60%2010%20L102%2027%20L102%2063%20Q102%2088%2060%20110%20Q18%2088%2018%2063%20L18%2027%20Z%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%223%22/%3E%3Cg%20fill%3D%22white%22%3E%3Crect%20x%3D%2248%22%20y%3D%2228%22%20width%3D%223.5%22%20height%3D%2220%22%20rx%3D%221.5%22/%3E%3Crect%20x%3D%2253.5%22%20y%3D%2228%22%20width%3D%223.5%22%20height%3D%2220%22%20rx%3D%221.5%22/%3E%3Crect%20x%3D%2259%22%20y%3D%2228%22%20width%3D%223.5%22%20height%3D%2220%22%20rx%3D%221.5%22/%3E%3Cpath%20d%3D%22M48%2044%20Q48%2052%2051.75%2054%20Q55.5%2052%2055.5%2044%20Z%22/%3E%3Crect%20x%3D%2250%22%20y%3D%2254%22%20width%3D%223.5%22%20height%3D%2224%22%20rx%3D%221.75%22/%3E%3C/g%3E%3Cg%20fill%3D%22white%22%3E%3Cpath%20d%3D%22M69%2028%20Q78%2028%2079%2040%20L69%2044%20Z%22/%3E%3Crect%20x%3D%2268%22%20y%3D%2244%22%20width%3D%223.5%22%20height%3D%2234%22%20rx%3D%221.75%22/%3E%3C/g%3E%3C/svg%3E">
 
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--red:#E63946;--red-light:rgba(230,57,70,0.18);--red-dark:#ff6b6b;--green:#2ecc71;--green-light:rgba(46,204,113,0.15);--amber:#f39c12;--amber-light:rgba(243,156,18,0.15);--blue:#4a9eff;--blue-light:rgba(74,158,255,0.15);--bg:#0a0a0a;--card:#141414;--card2:#1c1c1c;--text:#f0f0f0;--muted:#888;--border:#2a2a2a;--radius:14px;--radius-sm:8px}

@@ -274,7 +274,48 @@ ALTER TABLE noshow ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "active_read" ON noshow FOR SELECT USING (
   EXISTS(SELECT 1 FROM profiles WHERE id=auth.uid() AND subscription_status='active'));
 CREATE POLICY "active_insert" ON noshow FOR INSERT WITH CHECK (
-  EXISTS(SELECT 1 FROM profiles WHERE id=auth.uid() AND subscription_status='active'));</pre>
+  EXISTS(SELECT 1 FROM profiles WHERE id=auth.uid() AND subscription_status='active'));
+CREATE POLICY "delete_own" ON noshow FOR DELETE USING (
+  auth.uid()=user_id OR EXISTS(SELECT 1 FROM profiles WHERE id=auth.uid() AND role='admin'));
+
+-- Rubrica professionisti (database condiviso: elettricista, idraulico, ecc.)
+CREATE TABLE professionals (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  category text NOT NULL CHECK (category IN (
+    'elettricista','idraulico','muratore','fabbro','imbianchino','falegname','vetraio',
+    'giardiniere','frigorista_hvac','allarmi_videosorveglianza','disinfestazione',
+    'pulizie_sanificazione','tappezziere','informatico_pos','commercialista','corriere_fornitore','altro')),
+  category_other text,
+  name text NOT NULL,
+  phone text,
+  email text,
+  note text,
+  ristorante text,
+  user_id uuid REFERENCES auth.users,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE professionals ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "active_read" ON professionals FOR SELECT USING (
+  EXISTS(SELECT 1 FROM profiles WHERE id=auth.uid() AND subscription_status='active'));
+CREATE POLICY "active_insert" ON professionals FOR INSERT WITH CHECK (
+  EXISTS(SELECT 1 FROM profiles WHERE id=auth.uid() AND subscription_status='active') AND user_id=auth.uid());
+CREATE POLICY "delete_own" ON professionals FOR DELETE USING (auth.uid()=user_id OR is_admin());
+
+-- Note di chi ha usato il professionista (solo testo, nessun voto)
+CREATE TABLE professional_uses (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  professional_id uuid NOT NULL REFERENCES professionals(id) ON DELETE CASCADE,
+  note text NOT NULL,
+  ristorante text,
+  user_id uuid REFERENCES auth.users,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE professional_uses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "active_read" ON professional_uses FOR SELECT USING (
+  EXISTS(SELECT 1 FROM profiles WHERE id=auth.uid() AND subscription_status='active'));
+CREATE POLICY "active_insert" ON professional_uses FOR INSERT WITH CHECK (
+  EXISTS(SELECT 1 FROM profiles WHERE id=auth.uid() AND subscription_status='active') AND user_id=auth.uid());
+CREATE POLICY "delete_own" ON professional_uses FOR DELETE USING (auth.uid()=user_id OR is_admin());</pre>
     </details>
     <details>
       <summary>Istruzioni Stripe ▾</summary>
@@ -534,6 +575,7 @@ CREATE POLICY "active_insert" ON noshow FOR INSERT WITH CHECK (
       <div class="tab" onclick="goTab('segnala')"><span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3C8 3 4 6 4 10c0 5 8 11 8 11s8-6 8-11c0-4-4-7-8-7z"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="15" r="0.8" fill="currentColor"/></svg></span>Segnala</div>
       <div class="tab" onclick="goTab('feed')"><span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg></span>Storico</div>
       <div class="tab" onclick="goTab('cauzioni')"><span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="3"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/><circle cx="12" cy="14" r="2"/></svg></span>Cauzioni</div>
+      <div class="tab" onclick="goTab('rubrica')"><span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="2" y1="13" x2="22" y2="13"/></svg></span>Rubrica</div>
       <div class="tab" id="tabSetup" onclick="goTab('setup')"><span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>Setup</div>
     </nav>
   </div>
@@ -573,6 +615,45 @@ CREATE POLICY "active_insert" ON noshow FOR INSERT WITH CHECK (
         <div class="count-badge" id="cauzioniCount">—</div>
       </div>
       <div id="cauzioniList"><div class="loading">Caricamento…</div></div>
+    </div>
+
+    <div class="page hidden" id="page-rubrica">
+      <div class="search-box">
+        <div class="section-label">Rubrica professionisti — condivisa tra i ristoratori</div>
+        <select id="rubFiltroCategoria" onchange="loadRubrica()" style="width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--card2);color:var(--text);font-family:inherit;outline:none;margin-bottom:10px">
+          <option value="">Tutte le categorie</option>
+        </select>
+        <input id="rubFiltroTesto" type="text" placeholder="Cerca per nome o note…" oninput="renderRubrica()" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--card2);color:var(--text);font-family:inherit;outline:none"/>
+      </div>
+
+      <button class="btn-submit" onclick="toggleFormRubrica()" style="margin-bottom:12px" id="btnToggleFormRubrica">+ Segnala un professionista</button>
+
+      <div class="form-card hidden" id="formRubrica">
+        <div class="form-title">Nuovo contatto</div>
+        <div class="field">
+          <label>Categoria *</label>
+          <select id="rubCategoria" onchange="document.getElementById('rubCategoriaAltroWrap').classList.toggle('hidden', this.value!=='altro')" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:15px;background:var(--card2);color:var(--text);font-family:inherit;outline:none">
+            <option value="">Seleziona…</option>
+          </select>
+        </div>
+        <div class="field hidden" id="rubCategoriaAltroWrap">
+          <label>Specifica categoria</label>
+          <input id="rubCategoriaAltro" type="text" placeholder="Es: tecnico allarmi"/>
+        </div>
+        <div class="field"><label>Nome / ditta *</label><input id="rubNome" type="text" placeholder="Es: Mario Rossi Impianti"/></div>
+        <div class="field"><label>Telefono</label><input id="rubTelefono" type="tel" placeholder="+39 347 1234567"/></div>
+        <div class="field"><label>Email</label><input id="rubEmail" type="email" placeholder="mario@esempio.it"/></div>
+        <div class="field"><label>Note</label><textarea id="rubNote" style="height:70px;line-height:1.5" placeholder="Es: interviene anche di notte, buon prezzo…"></textarea></div>
+        <button class="btn-submit" id="btnSubmitRubrica" onclick="segnalaProfessionista()">Aggiungi alla rubrica</button>
+        <div class="toast toast-ok" id="toastRubricaOk" style="margin-top:8px;text-align:center;justify-content:center">✓ Aggiunto alla rubrica</div>
+        <div class="toast toast-err" id="toastRubricaErr">✗ Errore. Riprova.</div>
+      </div>
+
+      <div class="feed-header">
+        <div class="feed-title">Professionisti segnalati</div>
+        <div class="count-badge" id="rubricaCount">—</div>
+      </div>
+      <div id="rubricaList"><div class="loading">Caricamento…</div></div>
     </div>
 
     <div class="page hidden" id="page-setup">
@@ -667,7 +748,7 @@ CREATE POLICY "active_insert" ON noshow FOR INSERT WITH CHECK (
     </div>
   </main>
   <div style="text-align:center;padding:16px 0 32px;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">
-    v 2026.04.10.1
+    v 2026.07.25.1
   </div>
 </div>
 
@@ -982,6 +1063,7 @@ function goTab(name){
   if(pg){pg.classList.remove('hidden');pg.classList.add('active')}
   if(name==='feed') loadFeed();
   if(name==='cauzioni') loadCauzioni();
+  if(name==='rubrica') loadRubrica();
   if(name==='setup') { loadSetup(); document.getElementById('setupPenale')?.addEventListener('input', aggiornaPreview); document.getElementById('setupOre')?.addEventListener('input', aggiornaPreview); }
   if(name==='admin') loadUsers();
 }
@@ -1554,6 +1636,201 @@ function inviaMailto(){
   );
   window.location.href=`mailto:${email}?subject=${oggetto}&body=${corpo}`;
   document.getElementById('inviteEmail').value='';
+}
+
+// ── RUBRICA PROFESSIONISTI (database condiviso tra ristoratori) ─────────────
+const CATEGORIE_PROF=[
+  ['elettricista','Elettricista'],
+  ['idraulico','Idraulico'],
+  ['muratore','Muratore / edile'],
+  ['fabbro','Fabbro'],
+  ['imbianchino','Imbianchino'],
+  ['falegname','Falegname'],
+  ['vetraio','Vetraio'],
+  ['giardiniere','Giardiniere / manutenzione verde'],
+  ['frigorista_hvac','Frigorista / climatizzazione'],
+  ['allarmi_videosorveglianza','Allarmi / videosorveglianza'],
+  ['disinfestazione','Disinfestazione / derattizzazione'],
+  ['pulizie_sanificazione','Pulizie / sanificazione'],
+  ['tappezziere','Tappezziere'],
+  ['informatico_pos','Informatico / POS'],
+  ['commercialista','Commercialista / consulente'],
+  ['corriere_fornitore','Corriere / fornitore'],
+  ['altro','Altro']
+];
+const CATEGORIE_PROF_MAP=Object.fromEntries(CATEGORIE_PROF);
+
+function escHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+let _rubricaCategoriePronte=false;
+function popolaCategorieRubrica(){
+  if(_rubricaCategoriePronte) return;
+  const optsHtml=CATEGORIE_PROF.map(([v,l])=>`<option value="${v}">${escHtml(l)}</option>`).join('');
+  const selFiltro=document.getElementById('rubFiltroCategoria');
+  const selForm=document.getElementById('rubCategoria');
+  if(selFiltro) selFiltro.insertAdjacentHTML('beforeend',optsHtml);
+  if(selForm) selForm.insertAdjacentHTML('beforeend',optsHtml);
+  _rubricaCategoriePronte=true;
+}
+
+function toggleFormRubrica(){
+  const f=document.getElementById('formRubrica');
+  f.classList.toggle('hidden');
+  document.getElementById('btnToggleFormRubrica').textContent=f.classList.contains('hidden')?'+ Segnala un professionista':'– Chiudi il modulo';
+}
+
+let _rubricaRows=[];
+async function loadRubrica(){
+  popolaCategorieRubrica();
+  const list=document.getElementById('rubricaList');
+  list.innerHTML='<div class="loading">Caricamento…</div>';
+  const cat=document.getElementById('rubFiltroCategoria')?.value||'';
+  let q=SB.from('professionals').select('*').order('created_at',{ascending:false});
+  if(cat) q=q.eq('category',cat);
+  const{data:rows,error}=await q;
+  if(error){list.innerHTML='<div class="loading">Errore caricamento.</div>';return}
+  _rubricaRows=rows||[];
+  renderRubrica();
+}
+
+function renderRubrica(){
+  const list=document.getElementById('rubricaList');
+  const testo=(document.getElementById('rubFiltroTesto')?.value||'').trim().toLowerCase();
+  let rows=_rubricaRows;
+  if(testo){
+    rows=rows.filter(r=>
+      (r.name||'').toLowerCase().includes(testo) ||
+      (r.note||'').toLowerCase().includes(testo) ||
+      (r.category_other||'').toLowerCase().includes(testo)
+    );
+  }
+  document.getElementById('rubricaCount').textContent=rows.length+' totali';
+  if(rows.length===0){list.innerHTML='<div class="empty-state"><div class="ei">🗂️</div>Nessun professionista trovato</div>';return}
+  list.innerHTML=rows.map(r=>{
+    const isAdmin=currentProfile&&currentProfile.role==='admin';
+    const isOwner=currentUser&&r.user_id&&r.user_id===currentUser.id;
+    const canDelete=isAdmin||isOwner;
+    const catLabel=(r.category==='altro'&&r.category_other)?escHtml(r.category_other):escHtml(CATEGORIE_PROF_MAP[r.category]||r.category);
+    const d=r.created_at?new Date(r.created_at).toLocaleDateString('it-IT'):'—';
+    return`<div class="feed-item" id="prof-${r.id}" style="flex-direction:column;align-items:stretch;gap:10px">
+      <div style="display:flex;gap:12px">
+        <div class="feed-dot">🛠️</div>
+        <div class="feed-body">
+          <div class="feed-phone" style="font-family:inherit">${escHtml(r.name)}</div>
+          <div class="feed-name">${catLabel}</div>
+          ${r.phone?`<div style="font-size:13px;margin-top:4px"><a href="tel:${escHtml(r.phone)}" style="color:var(--blue);text-decoration:none">📞 ${escHtml(r.phone)}</a></div>`:''}
+          ${r.email?`<div style="font-size:13px;margin-top:2px"><a href="mailto:${escHtml(r.email)}" style="color:var(--blue);text-decoration:none">✉ ${escHtml(r.email)}</a></div>`:''}
+          ${r.note?`<div class="feed-note">${escHtml(r.note)}</div>`:''}
+          <div class="feed-date">Segnalato da ${escHtml(r.ristorante||'—')} · ${d}</div>
+        </div>
+        ${canDelete?`<button onclick="eliminaProfessionista('${r.id}')" style="align-self:flex-start;font-size:11px;padding:3px 8px;border:1px solid rgba(230,57,70,0.4);border-radius:6px;background:none;color:#ff6b6b;cursor:pointer;font-family:inherit">🗑</button>`:''}
+      </div>
+      <button onclick="toggleUsiProfessionista('${r.id}')" id="btnUsi-${r.id}" style="align-self:flex-start;background:none;border:none;color:var(--blue);font-size:12px;cursor:pointer;font-family:inherit;padding:0">💬 Note di chi l'ha usato</button>
+      <div class="hidden" id="usi-${r.id}">
+        <div id="usiList-${r.id}" style="display:flex;flex-direction:column;gap:6px;margin-top:4px"></div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <input id="usiInput-${r.id}" type="text" placeholder="Com'è andata con questo professionista?" style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--card2);color:var(--text);font-family:inherit;outline:none" onkeydown="if(event.key==='Enter')aggiungiNotaUso('${r.id}')"/>
+          <button onclick="aggiungiNotaUso('${r.id}')" style="padding:9px 12px;background:var(--red);color:white;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">Invia</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function segnalaProfessionista(){
+  const categoria=document.getElementById('rubCategoria').value;
+  const categoriaAltro=document.getElementById('rubCategoriaAltro').value.trim();
+  const nome=document.getElementById('rubNome').value.trim();
+  const telefono=document.getElementById('rubTelefono').value.trim();
+  const email=document.getElementById('rubEmail').value.trim();
+  const note=document.getElementById('rubNote').value.trim();
+  if(!categoria){alert('Seleziona una categoria.');return}
+  if(!nome){document.getElementById('rubNome').focus();return}
+  const btn=document.getElementById('btnSubmitRubrica');
+  btn.disabled=true;btn.textContent='Invio…';
+  const{error}=await SB.from('professionals').insert([{
+    category:categoria,
+    category_other: categoria==='altro' ? (categoriaAltro||null) : null,
+    name:nome,
+    phone:telefono||null,
+    email:email||null,
+    note:note||null,
+    ristorante: currentProfile&&currentProfile.ristorante ? currentProfile.ristorante : null,
+    user_id: currentUser ? currentUser.id : null
+  }]);
+  btn.disabled=false;btn.textContent='Aggiungi alla rubrica';
+  if(error){
+    const t=document.getElementById('toastRubricaErr');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);
+    return;
+  }
+  document.getElementById('rubCategoria').value='';
+  document.getElementById('rubCategoriaAltroWrap').classList.add('hidden');
+  document.getElementById('rubCategoriaAltro').value='';
+  document.getElementById('rubNome').value='';
+  document.getElementById('rubTelefono').value='';
+  document.getElementById('rubEmail').value='';
+  document.getElementById('rubNote').value='';
+  const t=document.getElementById('toastRubricaOk');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);
+  toggleFormRubrica();
+  loadRubrica();
+}
+
+async function eliminaProfessionista(id){
+  if(!confirm('Eliminare questo professionista dalla rubrica condivisa? Verranno eliminate anche le note di chi l\'ha usato.')) return;
+  const{error}=await SB.from('professionals').delete().eq('id',id);
+  if(!error){
+    const el=document.getElementById('prof-'+id);
+    if(el) el.remove();
+  } else alert('Errore eliminazione.');
+}
+
+const _usiCaricati={};
+async function toggleUsiProfessionista(id){
+  const box=document.getElementById('usi-'+id);
+  const isOpen=!box.classList.contains('hidden');
+  if(isOpen){box.classList.add('hidden');return}
+  box.classList.remove('hidden');
+  if(!_usiCaricati[id]){_usiCaricati[id]=true;await loadNoteUso(id);}
+}
+
+async function loadNoteUso(profId){
+  const list=document.getElementById('usiList-'+profId);
+  list.innerHTML='<div class="loading" style="padding:8px 0;font-size:12px">Caricamento…</div>';
+  const{data:rows,error}=await SB.from('professional_uses').select('*').eq('professional_id',profId).order('created_at',{ascending:false});
+  if(error){list.innerHTML='<div class="loading" style="font-size:12px">Errore.</div>';return}
+  if(!rows||rows.length===0){list.innerHTML='<div style="font-size:12px;color:var(--muted)">Nessuna nota ancora. Sii il primo a raccontare com\'è andata.</div>';return}
+  const isAdmin=currentProfile&&currentProfile.role==='admin';
+  list.innerHTML=rows.map(u=>{
+    const canDel=isAdmin||(currentUser&&u.user_id&&u.user_id===currentUser.id);
+    const d=u.created_at?new Date(u.created_at).toLocaleDateString('it-IT'):'—';
+    return`<div style="background:rgba(255,255,255,0.04);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px">
+      <div>${escHtml(u.note)}</div>
+      <div style="color:var(--muted);margin-top:3px;font-size:11px">${escHtml(u.ristorante||'—')} · ${d}${canDel?` · <span onclick="eliminaNotaUso('${u.id}','${profId}')" style="color:#ff6b6b;cursor:pointer">elimina</span>`:''}</div>
+    </div>`;
+  }).join('');
+}
+
+async function aggiungiNotaUso(profId){
+  const input=document.getElementById('usiInput-'+profId);
+  const nota=input.value.trim();
+  if(!nota) return;
+  const{error}=await SB.from('professional_uses').insert([{
+    professional_id:profId,
+    note:nota,
+    ristorante: currentProfile&&currentProfile.ristorante ? currentProfile.ristorante : null,
+    user_id: currentUser ? currentUser.id : null
+  }]);
+  if(error){alert('Errore invio nota.');return}
+  input.value='';
+  loadNoteUso(profId);
+}
+
+async function eliminaNotaUso(id,profId){
+  if(!confirm('Eliminare questa nota?')) return;
+  const{error}=await SB.from('professional_uses').delete().eq('id',id);
+  if(!error) loadNoteUso(profId); else alert('Errore eliminazione.');
 }
 
 async function eliminaSegnalazione(id){

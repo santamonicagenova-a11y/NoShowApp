@@ -300,6 +300,8 @@ CREATE POLICY "active_read" ON professionals FOR SELECT USING (
 CREATE POLICY "active_insert" ON professionals FOR INSERT WITH CHECK (
   EXISTS(SELECT 1 FROM profiles WHERE id=auth.uid() AND subscription_status='active') AND user_id=auth.uid());
 CREATE POLICY "delete_own" ON professionals FOR DELETE USING (auth.uid()=user_id OR is_admin());
+CREATE POLICY "update_own" ON professionals FOR UPDATE USING (auth.uid()=user_id OR is_admin())
+  WITH CHECK (auth.uid()=user_id OR is_admin());
 
 -- Note di chi ha usato il professionista (solo testo, nessun voto)
 CREATE TABLE professional_uses (
@@ -629,7 +631,7 @@ CREATE POLICY "delete_own" ON professional_uses FOR DELETE USING (auth.uid()=use
       <button class="btn-submit" onclick="toggleFormRubrica()" style="margin-bottom:12px" id="btnToggleFormRubrica">+ Segnala un professionista</button>
 
       <div class="form-card hidden" id="formRubrica">
-        <div class="form-title">Nuovo contatto</div>
+        <div class="form-title" id="formRubricaTitle">Nuovo contatto</div>
         <div class="field">
           <label>Categoria *</label>
           <select id="rubCategoria" onchange="document.getElementById('rubCategoriaAltroWrap').classList.toggle('hidden', this.value!=='altro')" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:15px;background:var(--card2);color:var(--text);font-family:inherit;outline:none">
@@ -645,6 +647,7 @@ CREATE POLICY "delete_own" ON professional_uses FOR DELETE USING (auth.uid()=use
         <div class="field"><label>Email</label><input id="rubEmail" type="email" placeholder="mario@esempio.it"/></div>
         <div class="field"><label>Note</label><textarea id="rubNote" style="height:70px;line-height:1.5" placeholder="Es: interviene anche di notte, buon prezzo…"></textarea></div>
         <button class="btn-submit" id="btnSubmitRubrica" onclick="segnalaProfessionista()">Aggiungi alla rubrica</button>
+        <button class="btn-outline hidden" id="btnAnnullaModificaRubrica" onclick="annullaModificaProfessionista()" style="margin-top:8px">Annulla modifica</button>
         <div class="toast toast-ok" id="toastRubricaOk" style="margin-top:8px;text-align:center;justify-content:center">✓ Aggiunto alla rubrica</div>
         <div class="toast toast-err" id="toastRubricaErr">✗ Errore. Riprova.</div>
       </div>
@@ -748,7 +751,7 @@ CREATE POLICY "delete_own" ON professional_uses FOR DELETE USING (auth.uid()=use
     </div>
   </main>
   <div style="text-align:center;padding:16px 0 32px;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">
-    v 2026.07.25.1
+    v 2026.07.25.2
   </div>
 </div>
 
@@ -1675,10 +1678,52 @@ function popolaCategorieRubrica(){
   _rubricaCategoriePronte=true;
 }
 
+let rubEditId=null;
+
 function toggleFormRubrica(){
   const f=document.getElementById('formRubrica');
   f.classList.toggle('hidden');
   document.getElementById('btnToggleFormRubrica').textContent=f.classList.contains('hidden')?'+ Segnala un professionista':'– Chiudi il modulo';
+  if(f.classList.contains('hidden') && rubEditId) annullaModificaProfessionista();
+}
+
+function _rubricaClearForm(){
+  document.getElementById('rubCategoria').value='';
+  document.getElementById('rubCategoriaAltroWrap').classList.add('hidden');
+  document.getElementById('rubCategoriaAltro').value='';
+  document.getElementById('rubNome').value='';
+  document.getElementById('rubTelefono').value='';
+  document.getElementById('rubEmail').value='';
+  document.getElementById('rubNote').value='';
+  rubEditId=null;
+  document.getElementById('formRubricaTitle').textContent='Nuovo contatto';
+  document.getElementById('btnSubmitRubrica').textContent='Aggiungi alla rubrica';
+  document.getElementById('btnAnnullaModificaRubrica').classList.add('hidden');
+}
+
+function modificaProfessionista(id){
+  const r=_rubricaRows.find(x=>x.id===id);
+  if(!r) return;
+  rubEditId=id;
+  document.getElementById('formRubrica').classList.remove('hidden');
+  document.getElementById('btnToggleFormRubrica').textContent='– Chiudi il modulo';
+  document.getElementById('formRubricaTitle').textContent='Modifica contatto';
+  document.getElementById('rubCategoria').value=r.category;
+  document.getElementById('rubCategoriaAltroWrap').classList.toggle('hidden', r.category!=='altro');
+  document.getElementById('rubCategoriaAltro').value=r.category_other||'';
+  document.getElementById('rubNome').value=r.name||'';
+  document.getElementById('rubTelefono').value=r.phone||'';
+  document.getElementById('rubEmail').value=r.email||'';
+  document.getElementById('rubNote').value=r.note||'';
+  document.getElementById('btnSubmitRubrica').textContent='💾 Salva modifiche';
+  document.getElementById('btnAnnullaModificaRubrica').classList.remove('hidden');
+  document.getElementById('formRubrica').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function annullaModificaProfessionista(){
+  _rubricaClearForm();
+  document.getElementById('formRubrica').classList.add('hidden');
+  document.getElementById('btnToggleFormRubrica').textContent='+ Segnala un professionista';
 }
 
 let _rubricaRows=[];
@@ -1725,7 +1770,10 @@ function renderRubrica(){
           ${r.note?`<div class="feed-note">${escHtml(r.note)}</div>`:''}
           <div class="feed-date">Segnalato da ${escHtml(r.ristorante||'—')} · ${d}</div>
         </div>
-        ${canDelete?`<button onclick="eliminaProfessionista('${r.id}')" style="align-self:flex-start;font-size:11px;padding:3px 8px;border:1px solid rgba(230,57,70,0.4);border-radius:6px;background:none;color:#ff6b6b;cursor:pointer;font-family:inherit">🗑</button>`:''}
+        ${canDelete?`<div style="display:flex;flex-direction:column;gap:6px">
+          <button onclick="modificaProfessionista('${r.id}')" style="align-self:flex-start;font-size:11px;padding:3px 8px;border:1px solid rgba(74,158,255,0.4);border-radius:6px;background:none;color:var(--blue);cursor:pointer;font-family:inherit">✎</button>
+          <button onclick="eliminaProfessionista('${r.id}')" style="align-self:flex-start;font-size:11px;padding:3px 8px;border:1px solid rgba(230,57,70,0.4);border-radius:6px;background:none;color:#ff6b6b;cursor:pointer;font-family:inherit">🗑</button>
+        </div>`:''}
       </div>
       <button onclick="toggleUsiProfessionista('${r.id}')" id="btnUsi-${r.id}" style="align-self:flex-start;background:none;border:none;color:var(--blue);font-size:12px;cursor:pointer;font-family:inherit;padding:0">💬 Note di chi l'ha usato</button>
       <div class="hidden" id="usi-${r.id}">
@@ -1748,31 +1796,34 @@ async function segnalaProfessionista(){
   const note=document.getElementById('rubNote').value.trim();
   if(!categoria){alert('Seleziona una categoria.');return}
   if(!nome){document.getElementById('rubNome').focus();return}
+  const editing=!!rubEditId;
   const btn=document.getElementById('btnSubmitRubrica');
-  btn.disabled=true;btn.textContent='Invio…';
-  const{error}=await SB.from('professionals').insert([{
+  btn.disabled=true;btn.textContent=editing?'Salvataggio…':'Invio…';
+  const campi={
     category:categoria,
     category_other: categoria==='altro' ? (categoriaAltro||null) : null,
     name:nome,
     phone:telefono||null,
     email:email||null,
-    note:note||null,
-    ristorante: currentProfile&&currentProfile.ristorante ? currentProfile.ristorante : null,
-    user_id: currentUser ? currentUser.id : null
-  }]);
-  btn.disabled=false;btn.textContent='Aggiungi alla rubrica';
+    note:note||null
+  };
+  let error;
+  if(editing){
+    ({error}=await SB.from('professionals').update(campi).eq('id',rubEditId));
+  } else {
+    campi.ristorante = currentProfile&&currentProfile.ristorante ? currentProfile.ristorante : null;
+    campi.user_id = currentUser ? currentUser.id : null;
+    ({error}=await SB.from('professionals').insert([campi]));
+  }
+  btn.disabled=false;btn.textContent=editing?'💾 Salva modifiche':'Aggiungi alla rubrica';
   if(error){
     const t=document.getElementById('toastRubricaErr');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);
     return;
   }
-  document.getElementById('rubCategoria').value='';
-  document.getElementById('rubCategoriaAltroWrap').classList.add('hidden');
-  document.getElementById('rubCategoriaAltro').value='';
-  document.getElementById('rubNome').value='';
-  document.getElementById('rubTelefono').value='';
-  document.getElementById('rubEmail').value='';
-  document.getElementById('rubNote').value='';
-  const t=document.getElementById('toastRubricaOk');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);
+  const t=document.getElementById('toastRubricaOk');
+  t.textContent=editing?'✓ Contatto aggiornato':'✓ Aggiunto alla rubrica';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);
+  _rubricaClearForm();
   toggleFormRubrica();
   loadRubrica();
 }

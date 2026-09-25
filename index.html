@@ -242,7 +242,10 @@ CREATE TABLE profiles (
   created_at timestamptz DEFAULT now()
 );
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "own" ON profiles FOR ALL USING (auth.uid()=id);
+CREATE POLICY "select_own" ON profiles FOR SELECT USING (auth.uid()=id);
+CREATE POLICY "update_own" ON profiles FOR UPDATE USING (auth.uid()=id);
+-- + trigger profiles_guard (ruolo/abbonamento modificabili solo da admin)
+-- + trigger handle_new_user su auth.users (profilo creato solo con codice invito valido)
 CREATE POLICY "admin_all" ON profiles FOR ALL USING (
   EXISTS(SELECT 1 FROM profiles WHERE id=auth.uid() AND role='admin'));
 
@@ -255,7 +258,7 @@ CREATE TABLE invite_codes (
   created_at timestamptz DEFAULT now()
 );
 ALTER TABLE invite_codes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_check" ON invite_codes FOR SELECT USING (true);
+-- nessuna lettura pubblica: la verifica passa dalla funzione check_invite(code)
 CREATE POLICY "admin_manage" ON invite_codes FOR ALL USING (
   EXISTS(SELECT 1 FROM profiles WHERE id=auth.uid() AND role='admin'));
 
@@ -751,7 +754,7 @@ CREATE POLICY "delete_own" ON professional_uses FOR DELETE USING (auth.uid()=use
     </div>
   </main>
   <div style="text-align:center;padding:16px 0 32px;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">
-    v 2026.07.25.2
+    v 2026.09.25.1
   </div>
 </div>
 
@@ -1015,24 +1018,24 @@ async function doRegister(){
   if(!code||!rist||!email||!pwd){err.textContent='Compila tutti i campi.';err.classList.add('show');return}
   if(pwd.length<8){err.textContent='Password di almeno 8 caratteri.';err.classList.add('show');return}
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Verifica codice…';
-  const{data:invite,error:invErr}=await SB.from('invite_codes').select('*').eq('code',code).single();
-  if(invErr||!invite){
+  // v 2026.09.25.1 — il codice si verifica con check_invite (la tabella invite_codes non è più leggibile);
+  // profilo e consumo del codice li fa il trigger handle_new_user sul server, dai metadati del signUp.
+  const{data:esito,error:invErr}=await SB.rpc('check_invite',{p_code:code});
+  if(invErr||esito==='invalid'){
     btn.disabled=false;btn.textContent='Crea account';
     err.textContent='Codice invito non valido.';err.classList.add('show');return;
   }
-  if(invite.used===true){
+  if(esito==='used'){
     btn.disabled=false;btn.textContent='Crea account';
     err.textContent='Codice invito già utilizzato.';err.classList.add('show');return;
   }
   btn.textContent='Creazione account…';
-  const{data:authData,error:authErr}=await SB.auth.signUp({email,password:pwd});
+  const{error:authErr}=await SB.auth.signUp({email,password:pwd,options:{data:{invite_code:code,ristorante:rist}}});
   if(authErr){
     btn.disabled=false;btn.textContent='Crea account';
-    err.textContent=authErr.message;err.classList.add('show');return;
+    err.textContent=/database error/i.test(authErr.message)?'Codice invito non valido o già utilizzato.':authErr.message;
+    err.classList.add('show');return;
   }
-  const uid=authData.user.id;
-  await SB.from('profiles').insert([{id:uid,ristorante:rist,role:'user',subscription_status:'active'}]);
-  await SB.from('invite_codes').update({used:true,used_by:uid}).eq('id',invite.id);
   btn.disabled=false;btn.textContent='Crea account';
   await SB.auth.signInWithPassword({email,password:pwd});
 }
